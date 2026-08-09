@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3985e3748671d1949a590f3a92f09bf8, type: 3}
+  m_Name: BuildBundleConfigura
+  m_EditorClassIdentifier: 
+  AssetBundleConfig:
+  - bundleid: 0
+    moduleName: test1
+    isBuild: 0
+    lastClickBtnTime: 663.12665
+    prefabPathArr: []
+    rootFolderPathArr: []
+    signFolderPathArr: []
+  - bundleid: 0
+    moduleName: GameItem
+    isBuild: 0
+    lastClickBtnTime: 663.44336
+    prefabPathArr: []
+    rootFolderPathArr:
+    - Assets/BundleDemo/GameItem
+    signFolderPathArr: []
