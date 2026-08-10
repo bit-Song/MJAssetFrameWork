@@ -1,0 +1,96 @@
+{
+  "updateNotice": "输入本次热更描述...",
+  "downLoadUrl": "127.0.0.1/HotAssets/GameItem/1/StandaloneWindows64",
+  "hotAssetsPatcheList": [
+    {
+      "patchVersion": 1,
+      "hotAssetsList": [
+        {
+          "abName": "gameitembundleconfig.unity",
+          "md5": "9610ADBAEBF72C7F2E99BBBC93E05F4D",
+          "size": 3.01171875
+        },
+        {
+          "abName": "gameitem_6001.unity",
+          "md5": "081EB46396A954354872E39F68EE6A67",
+          "size": 528.4795
+        },
+        {
+          "abName": "gameitem_6002.unity",
+          "md5": "1D1FB20C964C611C308F588C6F900F0F",
+          "size": 536.7959
+        },
+        {
+          "abName": "gameitem_6003.unity",
+          "md5": "4AEFB58EF5C40EC44C1A968FF8B73BF8",
+          "size": 508.953125
+        },
+        {
+          "abName": "gameitem_6004.unity",
+          "md5": "F9D4C7F8843F71BB8C3D4BA601993FA6",
+          "size": 492.988281
+        },
+        {
+          "abName": "gameitem_6005.unity",
+          "md5": "1928C50AC05B5579EAE067B697DA9958",
+          "size": 494.289063
+        },
+        {
+          "abName": "gameitem_6006.unity",
+          "md5": "B888A55A5EA448DD421E874767FA73F4",
+          "size": 492.7881
+        },
+        {
+          "abName": "gameitem_6007.unity",
+          "md5": "BDEF07A2B5738E70E9EEAF87B9A50CB7",
+          "size": 471.744141
+        },
+        {
+          "abName": "gameitem_6008.unity",
+          "md5": "B77EE57AF9278DB201C90CB60A2A7903",
+          "size": 471.677734
+        },
+        {
+          "abName": "gameitem_6009.unity",
+          "md5": "E58E63AE053209EA35010F2F4D1D8D5E",
+          "size": 471.594727
+        },
+        {
+          "abName": "gameitem_6010.unity",
+          "md5": "CA677AFC5B62415BA7E84BFDC38D6ACB",
+          "size": 471.59082
+        },
+        {
+          "abName": "gameitem_6011.unity",
+          "md5": "65441B5538F0EB552106EB58F35F648F",
+          "size": 487.885742
+        },
+        {
+          "abName": "gameitem_6012.unity",
+          "md5": "ABE84D56CF6DBE8124433709E6C3B080",
+          "size": 523.3613
+        },
+        {
+          "abName": "gameitem_6013.unity",
+          "md5": "9F7C91CAE8A97500F6305D4B66ABCB6E",
+          "size": 511.5078
+        },
+        {
+          "abName": "gameitem_6014.unity",
+          "md5": "05C0D83471387C565308E2F93176EAC7",
+          "size": 519.2012
+        },
+        {
+          "abName": "gameitem_6015.unity",
+          "md5": "589B46D2FD8A76ED774599706513A4CF",
+          "size": 508.597656
+        },
+        {
+          "abName": "gameitem_6016.unity",
+          "md5": "33C8D56E85BE279AB0A6DAFFB701371C",
+          "size": 498.0332
+        }
+      ]
+    }
+  ]
+}

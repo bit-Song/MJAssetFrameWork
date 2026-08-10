@@ -16,15 +16,16 @@ MonoBehaviour:
   - bundleid: 0
     moduleName: test1
     isBuild: 0
-    lastClickBtnTime: 663.12665
+    lastClickBtnTime: 1888.9832
     prefabPathArr: []
     rootFolderPathArr: []
     signFolderPathArr: []
   - bundleid: 0
     moduleName: GameItem
-    isBuild: 0
-    lastClickBtnTime: 663.44336
-    prefabPathArr: []
+    isBuild: 1
+    lastClickBtnTime: 2104.4143
+    prefabPathArr:
+    - Assets/BundleDemo/GameItem/6002
     rootFolderPathArr:
     - Assets/BundleDemo/GameItem
     signFolderPathArr: []

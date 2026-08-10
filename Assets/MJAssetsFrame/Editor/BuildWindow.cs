@@ -10,6 +10,7 @@ namespace MJ.AssetFrameWork.ABFrame
         public BundleBehaviour bundleBehaviour;
         public BuildBundleWindow buildBundleWindow = new BuildBundleWindow();
         public BuildHotPatchWindow hotBundleWindow = new BuildHotPatchWindow();
+
         //左侧菜单显示
         private TreeViewState _treeState;
         private LeftMenuWinow _leftMenuWindow;
@@ -20,6 +21,8 @@ namespace MJ.AssetFrameWork.ABFrame
             BuildWindow buildWindow = GetWindow<BuildWindow>();
             buildWindow.minSize = new Vector2(985, 612);
             buildWindow.maxSize = new Vector2(985, 612);
+
+
         }
 
 
@@ -39,8 +42,6 @@ namespace MJ.AssetFrameWork.ABFrame
         private void OnGUI()
         {
             ShowBehaviourWindow(_leftMenuWindow.CurrentSelected);
-            //重绘时刷新数据 防止外部修改不能实时更新
-            bundleBehaviour?.Initzation();
             using (new EditorGUILayout.HorizontalScope())
             {
                 // 左侧菜单：固定180宽度，撑满高度
@@ -50,10 +51,23 @@ namespace MJ.AssetFrameWork.ABFrame
                 // 右侧内容区域
                 using (new EditorGUILayout.VerticalScope())
                 {
-                    _rightScroll = EditorGUILayout.BeginScrollView(_rightScroll);
-                    bundleBehaviour.OGUI();
-                    EditorGUILayout.EndScrollView();
-                    bundleBehaviour.DrawBuildButtons();
+                    //_rightScroll = EditorGUILayout.BeginScrollView(_rightScroll);
+                    switch (_leftMenuWindow.CurrentSelected)
+                    {
+                        case E_MenuSelected.AssetBundle:
+                        case E_MenuSelected.HotPatch:
+                            _rightScroll = EditorGUILayout.BeginScrollView(_rightScroll);
+                            ////重绘时刷新数据 防止外部修改不能实时更新
+                            bundleBehaviour?.Initzation();
+                            bundleBehaviour.OGUI();
+                            EditorGUILayout.EndScrollView();
+                            bundleBehaviour.DrawBuildButtons();
+                            break;
+                        case E_MenuSelected.BundleSetting:
+                            //显示BundleSettings面板内容
+                            Editor.CreateEditor(BundleSettings.Instance).OnInspectorGUI();
+                            break;
+                    }
                 }
             }
         }

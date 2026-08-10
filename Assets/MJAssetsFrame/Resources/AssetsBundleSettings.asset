@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad8b89ef0654996458fe642a34c20d61, type: 3}
+  m_Name: AssetsBundleSettings
+  m_EditorClassIdentifier: 
+  AssetDownLoadUrl: 127.0.0.1
+  bundleEnctypt:
+    isEncrypt: 0
+    encryptKey: 
+  buildTarget: 19
+  buildAssetBundleOptions: 256

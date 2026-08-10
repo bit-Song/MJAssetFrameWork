@@ -75,6 +75,14 @@ namespace MJ.AssetFrameWork.ABFrame
             }
         }
 
+        private static string HotAssetManifestPath
+        {
+            get
+            {
+                return Application.dataPath + "/../HotAssets/" + bundleModuleEnum + "AssetsHotManifest.json";
+            }
+        }
+
         /// <summary>
         /// 打包AssetBundel
         /// </summary>
@@ -281,10 +289,10 @@ namespace MJ.AssetFrameWork.ABFrame
             AssetDatabase.Refresh();
 
             //调用UnityAPI打包AssetBundle
-            //AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(_bundleOutPutPath, (UnityEditor.BuildAssetBundleOptions)Enum.Parse(typeof(UnityEditor.BuildAssetBundleOptions), BundleSettings.Instance.buildbundleOptions.ToString())
-            //    , (UnityEditor.BuildTarget)Enum.Parse(typeof(UnityEditor.BuildTarget), BundleSettings.Instance.buildTarget.ToString()));
+            AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(BundleOutPutPath, 
+                (UnityEditor.BuildAssetBundleOptions)Enum.Parse(typeof(UnityEditor.BuildAssetBundleOptions),BundleSettings.Instance.buildAssetBundleOptions.ToString()),
+                (UnityEditor.BuildTarget)Enum.Parse(typeof(UnityEditor.BuildTarget), BundleSettings.Instance.buildTarget.ToString()));
 
-            AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(BundleOutPutPath, BuildAssetBundleOptions.ChunkBasedCompression, EditorUserBuildSettings.activeBuildTarget);
             if (manifest == null)
             {
                 EditorUtility.DisplayProgressBar("BuildAssetBundle!", "BuildAssetBundle failed!", 1);
@@ -494,6 +502,10 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         public static void EncryptAllBundle()
         {
+            //如果不需要加密就直接返回
+            if (!BundleSettings.Instance.bundleEnctypt.isEncrypt)
+                return;
+
             DirectoryInfo directoryInfo = new DirectoryInfo(BundleOutPutPath);
             FileInfo[] fileInfoArr = directoryInfo.GetFiles("*", SearchOption.AllDirectories);
 
@@ -578,6 +590,43 @@ namespace MJ.AssetFrameWork.ABFrame
                 File.Copy(path, disPath);
             }
             Debug.Log("热更文件生成成功");
+            GeneralHotAssetsManifest();
+        }
+
+
+        /// <summary>
+        /// 生成热更资源配置清单
+        /// </summary>
+        public static void GeneralHotAssetsManifest()
+        {
+            HotAssetsManifest assetsManifest = new HotAssetsManifest();
+            assetsManifest.updateNotice = updateNotice;
+            assetsManifest.downLoadUrl = BundleSettings.Instance.AssetDownLoadUrl + "/HotAssets/" + bundleModuleEnum + "/" +
+                hotPatchVersion + "/" + BundleSettings.Instance.buildTarget;
+            //设置补丁信息
+            HotAssetsPatch hotAssetsPatch = new HotAssetsPatch();
+            hotAssetsPatch.patchVersion = hotPatchVersion;
+
+            //计算热更补丁文件信息
+            DirectoryInfo directoryInfo = new DirectoryInfo(HotAssetsOutPutPath);
+            //得到文件信息 
+            FileInfo[] bundleInfos = directoryInfo.GetFiles("*" + BundlePostfix);
+
+            foreach (FileInfo bundleInfo in bundleInfos)
+            {
+                HotFileInfo info = new HotFileInfo();
+                info.abName = bundleInfo.Name;
+                //TODO MD5 修改
+                info.md5 = MD5.GetMd5FromFile(bundleInfo.FullName);
+                info.size = bundleInfo.Length / 1024.0f;
+                hotAssetsPatch.hotAssetsList.Add(info);
+            }
+            assetsManifest.hotAssetsPatcheList.Add(hotAssetsPatch);
+            //把对象转换成json
+            string json = JsonConvert.SerializeObject(assetsManifest, Formatting.Indented);
+            //写入到本地文件
+            FileHelper.WriteFile(HotAssetManifestPath, Encoding.UTF8.GetBytes(json));
+
         }
     }
 }
