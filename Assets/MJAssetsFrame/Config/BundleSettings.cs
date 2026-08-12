@@ -2,6 +2,20 @@ using System;
 using UnityEngine;
 namespace MJ.AssetFrameWork.ABFrame
 {
+
+    /// <summary>
+    /// AssetBundle热更模式
+    /// </summary>
+    public enum E_BundleHotEnum
+    {
+        //不热更
+        NoHot,
+        //热更
+        Hot,
+    }
+
+
+
     [CreateAssetMenu(menuName = "ScriptableObject/AssetFrame/AssetsBundleSettings", fileName = "AssetsBundleSettings")]
     public class BundleSettings : ScriptableObject
     {
@@ -20,7 +34,13 @@ namespace MJ.AssetFrameWork.ABFrame
 
         //AssetBundle下载地址
         [Header("AssetBundle下载地址")]
-        public string AssetDownLoadUrl = "127.0.0.1";
+        public string AssetDownLoadUrl;
+
+        [Header("资源热更模式")]
+        public E_BundleHotEnum bundleHotType;
+
+        [Header("最大下载线程数量")]
+        public int MAX_THREAD_COUNT;
 
         //打包设置
         [Header("是否加密AssetBundle")]
@@ -31,6 +51,11 @@ namespace MJ.AssetFrameWork.ABFrame
 
         [Header("AssetBundle打包格式")]
         public BuildAssetBundleOptions buildAssetBundleOptions = BuildAssetBundleOptions.ChunkBasedCompression;
+
+
+
+        [Header("AssetBundle文件名后缀")]
+        public string BundlePostfix = ".unity";
     }
 
     /// <summary>

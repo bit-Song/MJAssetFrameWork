@@ -1,9 +1,6 @@
-using Ionic.Crc;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEditor;
@@ -39,7 +36,7 @@ namespace MJ.AssetFrameWork.ABFrame
         //所有预制体的Bundle字典
         private static Dictionary<string, List<string>> allPrefabsBundleDic = new Dictionary<string, List<string>>();
 
-        public const string BundlePostfix = ".unity";
+        //public const string BundlePostfix = ".unity";
 
 
         /// <summary>
@@ -333,7 +330,7 @@ namespace MJ.AssetFrameWork.ABFrame
                     AssetImporter importer = AssetImporter.GetAtPath(path);
                     if (importer != null)
                     {
-                        importer.assetBundleName = (clear ? "" : item.Key + BundlePostfix);
+                        importer.assetBundleName = (clear ? "" : item.Key + BundleSettings.Instance.BundlePostfix);
                     }
                 }
             }
@@ -349,7 +346,7 @@ namespace MJ.AssetFrameWork.ABFrame
                     AssetImporter importer = AssetImporter.GetAtPath(path);
                     if (importer != null)
                     {
-                        importer.assetBundleName = (clear ? "" : item.Key + BundlePostfix);
+                        importer.assetBundleName = (clear ? "" : item.Key + BundleSettings.Instance.BundlePostfix);
                     }
                 }
 
@@ -445,7 +442,7 @@ namespace MJ.AssetFrameWork.ABFrame
             AssetImporter importer = AssetImporter.GetAtPath(bundleConfigPath.Replace(Application.dataPath, "Assets"));
             if (importer != null)
             {
-                importer.assetBundleName = bundleModuleEnum.ToString().ToLower() + "bundleconfig" + BundlePostfix;
+                importer.assetBundleName = bundleModuleEnum.ToString().ToLower() + "bundleconfig" + BundleSettings.Instance.BundlePostfix;
             }
         }
 
@@ -580,7 +577,7 @@ namespace MJ.AssetFrameWork.ABFrame
             FileHelper.DeleteFolder(HotAssetsOutPutPath);
             Directory.CreateDirectory(HotAssetsOutPutPath);
             //得到所有的ab包文件路径
-            string[] bundlePatchArr = Directory.GetFiles(BundleOutPutPath, "*" + BundlePostfix);
+            string[] bundlePatchArr = Directory.GetFiles(BundleOutPutPath, "*" + BundleSettings.Instance.BundlePostfix);
             for (int i = 0; i < bundlePatchArr.Length; i++)
             {
                 EditorUtility.DisplayProgressBar("生成热更文件", "Name:" + Path.GetFileName(bundlePatchArr[i]), i * 0.1f / bundlePatchArr.Length);
@@ -610,7 +607,7 @@ namespace MJ.AssetFrameWork.ABFrame
             //计算热更补丁文件信息
             DirectoryInfo directoryInfo = new DirectoryInfo(HotAssetsOutPutPath);
             //得到文件信息 
-            FileInfo[] bundleInfos = directoryInfo.GetFiles("*" + BundlePostfix);
+            FileInfo[] bundleInfos = directoryInfo.GetFiles("*" + BundleSettings.Instance.BundlePostfix);
 
             foreach (FileInfo bundleInfo in bundleInfos)
             {

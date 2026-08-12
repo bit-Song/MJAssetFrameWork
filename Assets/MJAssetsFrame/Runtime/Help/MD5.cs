@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Text;
+using UnityEngine;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
@@ -12,25 +13,29 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <returns></returns>
         public static string GetMd5FromFile(string path)
         {
-            using (System.Security.Cryptography.MD5 md5File = System.Security.Cryptography.MD5.Create())
+            try
             {
-                using (FileStream fileRead = File.OpenRead(path))
+                using (System.Security.Cryptography.MD5 md5File = System.Security.Cryptography.MD5.Create())
                 {
-                    byte[] md5Buffer = md5File.ComputeHash(fileRead);
-                    md5File.Clear();
-                    StringBuilder sbMd5 = new StringBuilder();
-                    for (int i = 0; i < md5Buffer.Length; i++)
+                    using (FileStream fileRead = File.OpenRead(path))
                     {
-                        sbMd5.Append(md5Buffer[i].ToString("X2"));
+                        byte[] md5Buffer = md5File.ComputeHash(fileRead);
+                        md5File.Clear();
+                        StringBuilder sbMd5 = new StringBuilder();
+                        for (int i = 0; i < md5Buffer.Length; i++)
+                        {
+                            sbMd5.Append(md5Buffer[i].ToString("X2"));
+                        }
+                        return sbMd5.ToString();
                     }
-                    return sbMd5.ToString();
                 }
             }
-
+            catch (System.Exception)
+            {
+                Debug.LogError("MD5码编译失败：" + path);
+                throw;
+            }
         }
-
-
-
 
         /// <summary>
         /// 传一个字符串，方法改字符串的MD5字符串

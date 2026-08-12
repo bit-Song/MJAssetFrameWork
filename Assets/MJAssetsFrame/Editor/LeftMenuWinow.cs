@@ -56,21 +56,8 @@ namespace MJ.AssetFrameWork.ABFrame
             base.SelectionChanged(selectedIds);
             if (selectedIds.Count > 0)
             {
-                Debug.Log(((E_MenuSelected)(selectedIds[0])).ToString());
                 //设置当前选中的页面
                 CurrentSelected = (E_MenuSelected)(selectedIds[0]);
-                //buildWindow.ShowBehaviourWindow(CurrentSelected);
-                //处理选中菜单事件
-                //switch (CurrentSelected)
-                //{
-                //    case E_MenuSelected.AssetBundle:
-                //        break;
-                //    case E_MenuSelected.HotPatch:
-                //        break;
-                //    case E_MenuSelected.BundleSetting:
-                //        break;
-                //}
-
             }
         }
 
