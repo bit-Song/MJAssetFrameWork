@@ -26,9 +26,6 @@ namespace MJ.AssetFrameWork.ABFrame
             }
         }
 
-
-
-
         protected virtual void OnInitlizate()
         {
 

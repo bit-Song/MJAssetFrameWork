@@ -1,199 +1,128 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
     public class DownLoadEventHandler
     {
-        public DownLoadEvent downLoadEvent;//»Øµ÷
+        public DownLoadEvent downLoadEvent;//å›è°ƒ
         public HotFileInfo hotFileInfo;
     }
-    //ÏÂÔØÊÂ¼ş
+
+    //ä¸‹è½½äº‹ä»¶
     public delegate void DownLoadEvent(HotFileInfo hotInfo);
-    /// <summary>
-    /// ¶àÏß³Ì×ÊÔ´ÏÂÔØÆ÷
-    /// </summary>
+
     public class AssetDownLoader
     {
-        //×î´óÏÂÔØÏß³Ì¸öÊı
+        //æœ€å¤§ä¸‹è½½çº¿ç¨‹ä¸ªæ•°
         public int MAX_THREAD_COUNT = 3;
 
-        //×ÊÔ´ÎÄ¼şÏÂÔØµØÖ·
+        //èµ„æºæ–‡ä»¶ä¸‹è½½åœ°å€
         public string assetsDownLoadUrl;
-        //ÈÈ¸üÎÄ¼şµÄ´æ´¢Â·¾¶
+        //çƒ­æ›´æ–‡ä»¶çš„å­˜å‚¨è·¯å¾„
         public string hotAssetsSvaePath;
 
-        //µ±Ç°ÈÈ¸üµÄ×ÊÔ´Ä£¿é
+        //å½“å‰çƒ­æ›´çš„èµ„æºæ¨¡å—
         public HotAssetsModule curHotAssetsModule;
 
-        //ÎÄ¼şÏÂÔØ¶ÓÁĞ
+        //æ–‡ä»¶ä¸‹è½½é˜Ÿåˆ—
         private Queue<HotFileInfo> downLoadQueue;
 
-        //ÏÂÔØ³É¹¦»Øµ÷
-        private DownLoadEvent downLoadSuccess;
+        //å½“å‰æ‰€æœ‰æ­£åœ¨ä¸‹è½½çš„çº¿ç¨‹åˆ—è¡¨
+        private List<DownLoadThread> mAllDownLoadThreadList = new List<DownLoadThread>();
 
-        //ÏÂÔØÊ§°Ü»Øµ÷
-        private DownLoadEvent downLoadFailed;
+        //é˜²æ­¢å®Œæˆå›è°ƒè§¦å‘å¤šæ¬¡
+        private bool mIsFinished = false;
 
-        //ÏÂÔØÍê³É»Øµ÷
-        private DownLoadEvent downLoadFinish;
-
-        //ÏÂÔØ»Øµ÷µÄÁĞ±í
-        private Queue<DownLoadEventHandler> downLaodEventQueue = new Queue<DownLoadEventHandler>();
-
-        //µ±Ç°ËùÓĞÕıÔÚÏÂÔØµÄÏß³ÌÁĞ±í
-        private List<DownLoadThread> allDownLoadThreadList = new List<DownLoadThread>();
         /// <summary>
-        /// ×ÊÔ´ÏÂÔØÆ÷
+        /// èµ„æºä¸‹è½½å™¨
         /// </summary>
-        /// <param name="hotAssetsManifest">×ÊÔ´ÏÂÔØÄ£¿é</param>
-        /// <param name="downLoadQueue">×ÊÔ´ÏÂÔØ¶ÓÁĞ</param>
-        /// <param name="downLoadUrl">×ÊÔ´ÏÂÔØÂ·¾¶</param>
-        /// <param name="hotAssetsSavePath">ÈÈ¸ü×ÊÔ´´æ´¢Â·¾¶</param>
-        /// <param name="downSuccess">ÏÂÔØ³É¹¦»Øµ÷</param>
-        /// <param name="dpwnloadFailed">ÏÂÔØÊ§°Ü»Øµ÷</param>
-        /// <param name="downLoadFinish">ÏÂÔØ½áÊø»Øµ÷</param>
-        public AssetDownLoader(HotAssetsModule hotAssetsModule, Queue<HotFileInfo> downLoadQueue, string downLoadUrl, string hotAssetsSavePath,
-            DownLoadEvent downLoadSuccess, DownLoadEvent downLoadFailed, DownLoadEvent downLoadFinish)
+        public AssetDownLoader(HotAssetsModule hotAssetsModule, Queue<HotFileInfo> downLoadQueue, string downLoadUrl, string hotAssetsSavePath)
         {
             this.curHotAssetsModule = hotAssetsModule;
             this.downLoadQueue = downLoadQueue;
             this.assetsDownLoadUrl = downLoadUrl;
-            this.downLoadSuccess = downLoadSuccess;
             this.hotAssetsSvaePath = hotAssetsSavePath;
-            this.downLoadFailed = downLoadFailed;
-            this.downLoadFinish = downLoadFinish;
         }
 
+        /// <summary>
+        /// å¼€å§‹ä¸‹è½½é˜Ÿåˆ—ä¸­çš„èµ„æº
+        /// </summary>
         public void StartThreadDownLoadQueue()
         {
-            //¸ù¾İ×î´óµÄÏß³ÌÏÂÔØ¸öÊı£¬¿ªÆô»ù´¡ÏÂÔØÍ¨µÀ
-
-            for (int i = 0; i < MAX_THREAD_COUNT; i++)
+            lock (mAllDownLoadThreadList)
             {
-                if (downLoadQueue.Count > 0)
+                for (int i = 0; i < MAX_THREAD_COUNT; i++)
                 {
-                    Debug.Log("Start DownLoad AssetBundlel MAX_THREAD_COUTN:" + MAX_THREAD_COUNT);
-                    StartDownLoadNextBundle();
-                }
-            }
-
-        }
-
-        /// <summary>
-        /// ¿ªÊ¼ÏÂÔØÏÂÒ»¸öAssetBundle
-        /// </summary>
-        private void StartDownLoadNextBundle()
-        {
-            HotFileInfo hotFileInfo = downLoadQueue.Dequeue();
-            DownLoadThread downLoadItem = new DownLoadThread(curHotAssetsModule, hotFileInfo, assetsDownLoadUrl, hotAssetsSvaePath);
-
-            downLoadItem.StartDownLoad(DownLoadSuccess, DownLoadFailed);
-            allDownLoadThreadList.Add(downLoadItem);
-        }
-
-        /// <summary>
-        /// ¿ªÊ¼ÏÂÔØÏÂÒ»¸öAssetBundle
-        /// </summary>
-        public void DownLoadNextBundle()
-        {
-            //Èç¹ûµ±Ç°ÏÂÔØµÄÏß³Ì¸öÊıÒÑ¾­´ïµ½ÉÏÏŞ¾Í¹Ø±Õµ±Ç°ÏÂÔØÍ¨µÀ
-            if (allDownLoadThreadList.Count > MAX_THREAD_COUNT)
-            {
-                Debug.Log("DownLoadNextBundle Out MaxTheadCount,Close this DownLoad Channel...");
-                return;
-            }
-
-            if (downLoadQueue.Count > 0)
-            {
-                StartDownLoadNextBundle();
-                if (allDownLoadThreadList.Count < MAX_THREAD_COUNT)
-                {
-                    //¼ÆËãÕıÔÚµÈ´ıÏÂÔØÏß³ÌµÄ¸öÊı
-                    int idleThreadCount = MAX_THREAD_COUNT - allDownLoadThreadList.Count;
-
-                    for (int i = 0; i < idleThreadCount; i++)
+                    if (downLoadQueue.Count > 0)
                     {
-                        if (downLoadQueue.Count > 0)
-                        {
-                            StartDownLoadNextBundle();
-                        }
+                        Debug.Log("Start DownLoad AssetBundle MAX_THREAD_COUNT:" + MAX_THREAD_COUNT);
+                        //å¹¶è¡Œä¸‹è½½å¤„ç†
+                        StartDownLoadNextBundle().Forget();
                     }
                 }
             }
-            else
+        }
+        /// <summary>
+        /// ä¸‹è½½å®Œæˆåå¯åŠ¨ä¸‹ä¸€ä¸ª
+        /// </summary>
+        public void DownLoadNextBundle()
+        {
+            lock (mAllDownLoadThreadList)
             {
-                //µÈ´ıÏÂÔØÖĞµÄÏß³ÌÈ«²¿½áÊøËµÃ÷ÎÄ¼şÏÂÔØÍê³É
-                if (allDownLoadThreadList.Count == 0)
+                if (mIsFinished)
+                    return;
+
+                //é˜Ÿåˆ—è¿˜æœ‰æ–‡ä»¶ï¼Œå¯åŠ¨ä¸‹ä¸€ä¸ªä¸‹è½½
+                if (downLoadQueue.Count > 0)
                 {
-                    TriggerCallBackInMainThread(new DownLoadEventHandler { downLoadEvent = downLoadFinish });
+                    StartDownLoadNextBundle().Forget();
+                }
+                //é˜Ÿåˆ—ç©ºäº†ä¸”æ²¡æœ‰æ­£åœ¨ä¸‹è½½çš„çº¿ç¨‹ï¼Œè¯´æ˜å…¨éƒ¨å®Œæˆ
+                else if (mAllDownLoadThreadList.Count == 0)
+                {
+                    mIsFinished = true;
+                    curHotAssetsModule.DownLoadAssetBundleFinish();
                 }
             }
-
         }
 
         /// <summary>
-        /// ÏÂÔØ³É¹¦
+        /// ç§»é™¤ä¸‹è½½çº¿ç¨‹
         /// </summary>
-        /// <param name="downLoadThread"></param>
-        /// <param name="hotFileInfo"></param>
-        public void DownLoadSuccess(DownLoadThread downLoadThread, HotFileInfo hotFileInfo)
-        {
-            RemoveDownLoadThread(downLoadThread);
-            //ÒòÎªÊÇÔÚ×ÓÏß³ÌÖĞÏÂÔØ£¬ËùÒÔ»Øµ÷Ò²ÊÇÔÚ×ÓÏß³ÌÖĞ´¥·¢µÄ
-            //ÎÒÃÇĞèÒª½«»Øµ÷·Åµ½Ö÷Ïß³ÌÖĞµ÷ÓÃ
-            //¼ÓÈëµ½ÏÂÔØ»Øµ÷µÄ¶ÓÁĞÖĞ  
-            TriggerCallBackInMainThread(new DownLoadEventHandler { downLoadEvent = downLoadSuccess, hotFileInfo = hotFileInfo });
-            DownLoadNextBundle();
-        }
-
-        /// <summary>
-        /// ÏÂÔØÊ§°Ü
-        /// </summary>
-        /// <param name="downLoadThread"></param>
-        /// <param name="hotFileInfo"></param>
-        public void DownLoadFailed(DownLoadThread downLoadThread, HotFileInfo hotFileInfo)
-        {
-            RemoveDownLoadThread(downLoadThread);
-            TriggerCallBackInMainThread(new DownLoadEventHandler { downLoadEvent = downLoadFailed, hotFileInfo = hotFileInfo });
-            DownLoadNextBundle();
-        }
-        /// <summary>
-        /// ÔÚÖ÷Ïß³ÌÖĞ´¥·¢»Øµ÷
-        /// </summary>
-        /// <param name="downLoadEventHandler"></param>
-        public void TriggerCallBackInMainThread(DownLoadEventHandler downLoadEventHandler)
-        {
-            lock (downLaodEventQueue)
-            {
-                downLaodEventQueue.Enqueue(downLoadEventHandler);
-            }
-        }
-
-
-        /// <summary>
-        /// Ö÷Ïß³Ì¸üĞÂ½Ó¿Ú
-        /// </summary>
-        public void OnMainThreadUpdate()
-        {
-            //ÔÚÕâÀï´¦ÀíÏÂÔØÍê³ÉµÄ»Øµ÷ĞÅÏ¢ 
-            //if (downLoadQueue.Count > 0)
-            //{
-            //    DownLoadEventHandler downLoadEvent = downLaodEventQueue.Dequeue();
-            //    downLoadEvent.downLoadEvent?.Invoke(downLoadEvent.hotFileInfo);
-            //}
-            if (downLaodEventQueue.Count > 0)
-            {
-                DownLoadEventHandler downLoadEvent = downLaodEventQueue.Dequeue();
-                downLoadEvent.downLoadEvent?.Invoke(downLoadEvent.hotFileInfo);
-            }
-        }
         public void RemoveDownLoadThread(DownLoadThread downLoadThread)
         {
-            if (allDownLoadThreadList.Contains(downLoadThread))
-                allDownLoadThreadList.Remove(downLoadThread);
+            lock (mAllDownLoadThreadList)
+            {
+                if (mAllDownLoadThreadList.Contains(downLoadThread))
+                    mAllDownLoadThreadList.Remove(downLoadThread);
+            }
         }
+        /// <summary>
+        /// å¼€å§‹ä¸‹è½½ä¸‹ä¸€ä¸ªAssetBundle
+        /// </summary>
+        private async UniTask StartDownLoadNextBundle()
+        {
+            HotFileInfo hotFileInfo = downLoadQueue.Dequeue();
+            DownLoadThread downLoadItem = new DownLoadThread(curHotAssetsModule, hotFileInfo, assetsDownLoadUrl, hotAssetsSvaePath);
+            mAllDownLoadThreadList.Add(downLoadItem);
+            //await DownLoadAsync(downLoadItem, hotFileInfo);
+            //ä¸‹è½½æˆåŠŸåè¿›è¡Œå¤„ç† ä¸‹è½½æˆåŠŸåçš„å›è°ƒ
+            bool success = await downLoadItem.StartDownLoad();
+            RemoveDownLoadThread(downLoadItem);
+
+            //å¤„ç†ä¸‹è½½æˆåŠŸåçš„å†…å®¹
+            if (success)
+            {
+                curHotAssetsModule.DownLoadAssetBundleSuccess(hotFileInfo);
+            }
+            else
+            {
+                curHotAssetsModule.DownLoadAssetBundleFailed(hotFileInfo);
+            }
+            DownLoadNextBundle();
+        }
+
     }
 }

@@ -1,9 +1,10 @@
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
+using System.Threading.Tasks;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
-
 namespace MJ.AssetFrameWork.ABFrame
 {
     /// <summary>
@@ -12,10 +13,13 @@ namespace MJ.AssetFrameWork.ABFrame
     public class WaitDownLoadModule
     {
         public BundleModuleEnum bundleModule;
-        public Action<BundleModuleEnum> startHot;
-        public Action<BundleModuleEnum> hotFinish;
 
-        public Action<BundleModuleEnum, float> hotAssetsProgressCallBack;
+        public UniTaskCompletionSource tcs;
+
+        //public Action<BundleModuleEnum> startHot;
+        //public Action<BundleModuleEnum> hotFinish;
+
+        //public Action<BundleModuleEnum, float> hotAssetsProgressCallBack;
     }
 
 
@@ -41,12 +45,11 @@ namespace MJ.AssetFrameWork.ABFrame
         private Queue<WaitDownLoadModule> waitDownLoadModuleQueue = new Queue<WaitDownLoadModule>();
 
 
-        public void HotAssets(BundleModuleEnum bundleModule, Action<BundleModuleEnum> startHotCallback, Action<BundleModuleEnum> finishHotCallback, Action<BundleModuleEnum> waiteDownLoad, bool isCheckVersion = true)
+        public async UniTask HotAssets(BundleModuleEnum bundleModule, bool isCheckVersion = true)
         {
             //如果不需要热更直接执行热更完成回调即可
             if (BundleSettings.Instance.bundleHotType == E_BundleHotEnum.NoHot)
             {
-                finishHotCallback?.Invoke(bundleModule);
                 return;
             }
 
@@ -63,19 +66,37 @@ namespace MJ.AssetFrameWork.ABFrame
                 {
                     downLoadAssetsModuleList.Add(assetsModule);
                 }
-                assetsModule.OnDownLoadAllAssetsFinish += HotModuleAssetsFinish;
-                //开始热更资源
-                assetsModule.StartHotAssets(() => { MultipleThreadBalancing(); startHotCallback?.Invoke(bundleModule); }, finishHotCallback);
+                //处理线程均衡
+                MultipleThreadBalancing();
+                await assetsModule.StartHotAssets(isCheckVersion);
+                HotModuleAssetsFinish(bundleModule);
             }
             else
             {
-                waiteDownLoad?.Invoke(bundleModule);
-                //把热更模块添加到等待下载队列
-                waitDownLoadModuleQueue.Enqueue(new WaitDownLoadModule() { bundleModule = bundleModule, startHot = startHotCallback, hotFinish = finishHotCallback });
+                var tcs = new UniTaskCompletionSource();
+                waitDownLoadModuleQueue.Enqueue(new WaitDownLoadModule()
+                {
+                    bundleModule = bundleModule,
+                    tcs = tcs
+                });
+                await tcs.Task;
+                downLoadingAssetsModuleDic.Add(bundleModule, assetsModule);
+
+                if (!downLoadAssetsModuleList.Contains(assetsModule))
+                    downLoadAssetsModuleList.Add(assetsModule);
+
+                MultipleThreadBalancing();
+                await assetsModule.StartHotAssets(isCheckVersion);
+                HotModuleAssetsFinish(bundleModule);
+
             }
         }
 
-
+        /// <summary>
+        /// 得到或者创建一个模块
+        /// </summary>
+        /// <param name="bundleModule"></param>
+        /// <returns></returns>
         public HotAssetsModule GetOrNewAssetModule(BundleModuleEnum bundleModule)
         {
             HotAssetsModule assetsModule = null;
@@ -84,7 +105,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 assetsModule = allAssetsModuleDic[bundleModule];
             else
             {
-                assetsModule = new HotAssetsModule(bundleModule, MJAssetsABFrame.Instance);
+                assetsModule = new HotAssetsModule(bundleModule);
                 allAssetsModuleDic.Add(bundleModule, assetsModule);
             }
             return assetsModule;
@@ -96,10 +117,10 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         /// <param name="bundleModule">热更模块</param>
         /// <param name="callBack">热更回调</param>
-        public void CheckAssetsVersion(BundleModuleEnum bundleModule, Action<bool, float> callBack)
+        public async UniTask<CheckVersionResult> CheckAssetsVersion(BundleModuleEnum bundleModule)
         {
             HotAssetsModule assetsModule = GetOrNewAssetModule(bundleModule);
-            assetsModule.CheckAssetsVersion(callBack);
+            return await assetsModule.CheckAssetsVersion();
         }
 
         /// <summary>
@@ -122,6 +143,7 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <param name="bundleModule"></param>
         public void HotModuleAssetsFinish(BundleModuleEnum bundleModule)
         {
+            Debug.Log("热更模块资源完成：" + bundleModule);
             //将下载完成的模块从下载的字典中移除
             if (downLoadingAssetsModuleDic.ContainsKey(bundleModule))
             {
@@ -136,7 +158,9 @@ namespace MJ.AssetFrameWork.ABFrame
             if (waitDownLoadModuleQueue.Count > 0)
             {
                 WaitDownLoadModule waitDownLoadModule = waitDownLoadModuleQueue.Dequeue();
-                HotAssets(waitDownLoadModule.bundleModule, waitDownLoadModule.startHot, waitDownLoadModule.hotFinish, null);
+                //HotAssets(waitDownLoadModule.bundleModule, waitDownLoadModule.startHot, waitDownLoadModule.hotFinish, null).Forget();
+                //HotAssets(waitDownLoadModule.bundleModule);
+                waitDownLoadModule.tcs.TrySetResult();  //唤醒等待中的HotAssets
             }
             else
             {
@@ -155,6 +179,7 @@ namespace MJ.AssetFrameWork.ABFrame
             //获取当前正在下载的热更资源模块的个数
             int count = downLoadingAssetsModuleDic.Count;
 
+            if (count == 0) return;
             //计算多线程均衡后分配个数
             //以最大下载线程个数为3为例
             //1.   3/1 = 3；最大并发下载线程个数为3 (偶数)
@@ -200,7 +225,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             for (int i = 0; i < downLoadAssetsModuleList.Count; i++)
             {
-                downLoadAssetsModuleList[i].OnMainThreadUpdate();
+                //downLoadAssetsModuleList[i].OnMainThreadUpdate();
             }
         }
 
@@ -208,4 +233,3 @@ namespace MJ.AssetFrameWork.ABFrame
 
     }
 }
-

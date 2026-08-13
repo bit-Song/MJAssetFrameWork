@@ -7,12 +7,7 @@ namespace MJ.AssetFrameWork.ABFrame
 {
     public partial class MJAssetsABFrame : MJABFrameBase
     {
-        protected IHotAssets mHotAssets = null;
-        protected override void OnInitlizate()
-        {
-            base.OnInitlizate();
-        }
-
+        private IHotAssets mHotAssets = null;
         /// <summary>
         /// ³õÊ¼»¯¿ò¼Ü
         /// </summary>

@@ -1,12 +1,15 @@
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
     public partial class MJAssetsABFrame
     {
+
         /// <summary>
         /// 开始热更
         /// </summary>
@@ -15,9 +18,9 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <param name="finishHotCallback">热更完成回调</param>
         /// <param name="waiteDownLoad">等待下载回调</param>
         /// <param name="isCheckVersion">是否检测版本</param>
-        public void HotAssets(BundleModuleEnum bundleModule, Action<BundleModuleEnum> startHotCallback, Action<BundleModuleEnum> finishHotCallback, Action<BundleModuleEnum> waiteDownLoad, bool isCheckVersion = true)
+        public async UniTask HotAssets(BundleModuleEnum bundleModule, bool isCheckVersion = true)
         {
-            mHotAssets.HotAssets(bundleModule, startHotCallback, finishHotCallback, waiteDownLoad, isCheckVersion);
+           await mHotAssets.HotAssets(bundleModule, isCheckVersion);
         }
 
         /// <summary>
@@ -25,19 +28,19 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         /// <param name="bundleModule">热更模块类型</param>
         /// <param name="callBack">检测完成回调</param>
-        public void CheckAssetsVersion(BundleModuleEnum bundleModule, Action<bool, float> callBack)
+        public async UniTask<CheckVersionResult> CheckAssetsVersion(BundleModuleEnum bundleModule)
         {
-            mHotAssets.CheckAssetsVersion(bundleModule, callBack);
+            return await mHotAssets.CheckAssetsVersion(bundleModule);
         }
 
         /// <summary>
         /// 获取热更模块
         /// </summary>
-        /// <param name="bundleModule">热更模块类型</param>
-        /// <returns></returns>
+        /// <param name = "bundleModule" > 热更模块类型 </ param >
+        /// < returns ></ returns >
         public HotAssetsModule GetHotAssetsModule(BundleModuleEnum bundleModule)
         {
-           return mHotAssets.GetHotAssetsModule(bundleModule);
+            return mHotAssets.GetHotAssetsModule(bundleModule);
         }
     }
 }
