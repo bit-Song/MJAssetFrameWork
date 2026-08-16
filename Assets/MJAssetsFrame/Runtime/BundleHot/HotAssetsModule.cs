@@ -35,6 +35,12 @@ namespace MJ.AssetFrameWork.ABFrame
         //本地资源清单
         private HotAssetsManifest mLocalHotAssetsManifest;
 
+        /// <summary>
+        /// 热更公告
+        /// </summary>
+        public string UpdateNoticeContent => mServerHotAssetsManifest.updateNotice;
+
+
         //服务端资源热更清单存储路径
         private string mServerHotAssetsManifestPath
         {
@@ -65,7 +71,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             get
             {
-                return Application.persistentDataPath + "/HotAssets/" + CurBundleModuleEnum + "/";
+                return Application.persistentDataPath+"/HotAssets/" + CurBundleModuleEnum + "/";
             }
         }
 
@@ -81,7 +87,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             mNeedDownLoadAssetList.Clear();
             mAllDownLoadAssetList.Clear();
-            mAssetsMaxSizeM = 0;
+
 
             //创建一个TCS 捕获所有文件下载完成的命令
             var tcs = new UniTaskCompletionSource();
@@ -224,7 +230,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             if (!Directory.Exists(HotAssetsSavePath))
                 Directory.CreateDirectory(HotAssetsSavePath);
-
+            mAssetsMaxSizeM = 0;
             foreach (var item in serverAssetsPath.hotAssetsList)
             {
                 //获取本地AssetBundle文件路径

@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using MJ.AssetFrameWork.ABFrame;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ public class Test : MonoBehaviour
     }
     private void Start()
     {
-        HotUpdateManager.Instance.CheackAssetsVersion(BundleModuleEnum.GameItem);
+        HotUpdateManager.Instance.HotAndPackAssets(BundleModuleEnum.GameItem).Forget();
 
 
 

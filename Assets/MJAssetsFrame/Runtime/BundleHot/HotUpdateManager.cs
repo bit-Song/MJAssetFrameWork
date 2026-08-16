@@ -16,13 +16,56 @@ namespace MJ.AssetFrameWork.ABFrame
         private static HotUpdateManager instance = new HotUpdateManager();
         public static HotUpdateManager Instance => instance;
 
+        private HotAssetsWindow mHotAssetsWindow;
+
+        /// <summary>
+        /// 热更并且解压模块
+        /// </summary>
+        /// <param name="bundleModuleEnum"></param>
+        public async UniTask HotAndPackAssets(BundleModuleEnum bundleModuleEnum)
+        {
+
+            mHotAssetsWindow = InstantiateResourcesObj<HotAssetsWindow>("HotAssetsWindow");
+
+            //开始解压游戏内嵌资源
+            //IDecompressAssets decompress = await MJAssetsABFrame.StartDeCompressBuiltinFile(bundleModuleEnum);
+            IDecompressAssets decompress = MJAssetsABFrame.StartDeCompressBuiltinFile(bundleModuleEnum);
+            mHotAssetsWindow.ShowDecompressProgress(decompress);
+            //等待解压
+            await MJAssetsABFrame.WaitDeCompress();
+            if (Application.internetReachability == NetworkReachability.NotReachable)
+            {
+                InstantiateResourcesObj<UpdateTipsWindow>("UpdatetipsWindow").InitView("当前无网络，请检测后重试", () => { NotNetButtonClick(bundleModuleEnum).Forget(); }, () => { NotNetButtonClick(bundleModuleEnum).Forget(); });
+                return;
+            }
+            else
+            {
+                CheackAssetsVersion(bundleModuleEnum).Forget();
+            }
+
+        }
+
+        public async UniTask NotNetButtonClick(BundleModuleEnum bundleModuleEnum)
+        {
+            //如果当前用户没有网络就弹出弹窗提示
+            if (Application.internetReachability != NetworkReachability.NotReachable)
+            {
+                CheackAssetsVersion(bundleModuleEnum).Forget();
+            }
+            else
+            {
+
+            }
+        }
+
+
         /// <summary>
         /// 检测资源版本
         /// </summary>
         /// <param name="bundleModuleEnum"></param>
         public async UniTask CheackAssetsVersion(BundleModuleEnum bundleModuleEnum, bool isCheckVersion = true)
         {
-            CheckVersionResult checkVersionResult = await MJAssetsABFrame.Instance.CheckAssetsVersion(bundleModuleEnum);
+            CheckVersionResult checkVersionResult = await MJAssetsABFrame.CheckAssetsVersion(bundleModuleEnum);
 
             if (checkVersionResult.isHot)
             {
@@ -66,7 +109,9 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <param name="bundleModuleEnum"></param>
         public async UniTask StartHotAssets(BundleModuleEnum bundleModuleEnum, bool isCheckVersion = true)
         {
-            await MJAssetsABFrame.Instance.HotAssets(bundleModuleEnum, isCheckVersion);
+            //更新热更进度
+            mHotAssetsWindow.ShowHotAssetsProgress(MJAssetsABFrame.GetHotAssetsModule(bundleModuleEnum));
+            await MJAssetsABFrame.HotAssets(bundleModuleEnum, isCheckVersion);
         }
 
         /// <summary>

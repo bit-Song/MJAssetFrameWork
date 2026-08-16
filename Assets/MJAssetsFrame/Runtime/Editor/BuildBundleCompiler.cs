@@ -286,8 +286,8 @@ namespace MJ.AssetFrameWork.ABFrame
             AssetDatabase.Refresh();
 
             //调用UnityAPI打包AssetBundle
-            AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(BundleOutPutPath, 
-                (UnityEditor.BuildAssetBundleOptions)Enum.Parse(typeof(UnityEditor.BuildAssetBundleOptions),BundleSettings.Instance.buildAssetBundleOptions.ToString()),
+            AssetBundleManifest manifest = BuildPipeline.BuildAssetBundles(BundleOutPutPath,
+                (UnityEditor.BuildAssetBundleOptions)Enum.Parse(typeof(UnityEditor.BuildAssetBundleOptions), BundleSettings.Instance.buildAssetBundleOptions.ToString()),
                 (UnityEditor.BuildTarget)Enum.Parse(typeof(UnityEditor.BuildTarget), BundleSettings.Instance.buildTarget.ToString()));
 
             if (manifest == null)
@@ -598,7 +598,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             HotAssetsManifest assetsManifest = new HotAssetsManifest();
             assetsManifest.updateNotice = updateNotice;
-            assetsManifest.downLoadUrl = BundleSettings.Instance.AssetDownLoadUrl + "/HotAssets/" + bundleModuleEnum + "/" +
+            assetsManifest.downLoadUrl = BundleSettings.Instance.AssetDownLoadUrl + bundleModuleEnum + "/" +
                 hotPatchVersion + "/" + BundleSettings.Instance.buildTarget;
             //设置补丁信息
             HotAssetsPatch hotAssetsPatch = new HotAssetsPatch();

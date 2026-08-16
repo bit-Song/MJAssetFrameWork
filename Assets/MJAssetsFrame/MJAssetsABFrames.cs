@@ -18,9 +18,9 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <param name="finishHotCallback">热更完成回调</param>
         /// <param name="waiteDownLoad">等待下载回调</param>
         /// <param name="isCheckVersion">是否检测版本</param>
-        public async UniTask HotAssets(BundleModuleEnum bundleModule, bool isCheckVersion = true)
+        public static async UniTask HotAssets(BundleModuleEnum bundleModule, bool isCheckVersion = true)
         {
-           await mHotAssets.HotAssets(bundleModule, isCheckVersion);
+            await instance.mHotAssets.HotAssets(bundleModule, isCheckVersion);
         }
 
         /// <summary>
@@ -28,9 +28,9 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         /// <param name="bundleModule">热更模块类型</param>
         /// <param name="callBack">检测完成回调</param>
-        public async UniTask<CheckVersionResult> CheckAssetsVersion(BundleModuleEnum bundleModule)
+        public static async UniTask<CheckVersionResult> CheckAssetsVersion(BundleModuleEnum bundleModule)
         {
-            return await mHotAssets.CheckAssetsVersion(bundleModule);
+            return await instance.mHotAssets.CheckAssetsVersion(bundleModule);
         }
 
         /// <summary>
@@ -38,9 +38,31 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         /// <param name = "bundleModule" > 热更模块类型 </ param >
         /// < returns ></ returns >
-        public HotAssetsModule GetHotAssetsModule(BundleModuleEnum bundleModule)
+        public static HotAssetsModule GetHotAssetsModule(BundleModuleEnum bundleModule)
         {
-            return mHotAssets.GetHotAssetsModule(bundleModule);
+            return instance.mHotAssets.GetHotAssetsModule(bundleModule);
+        }
+
+        /// <summary>
+        /// 开始解压内嵌文件
+        /// </summary>
+        /// <returns></returns>
+        public static IDecompressAssets StartDeCompressBuiltinFile(BundleModuleEnum bundleModuleEnum)
+        {
+            return instance.mDecompressAssets.StartDeCompressBuiltinFile(bundleModuleEnum);
+        }
+        /// <summary>
+        /// 获取解压进度
+        /// </summary>
+        /// <returns></returns>
+        public static float GetDeCompressProgress()
+        {
+            return instance.mDecompressAssets.GetDeCompressProgress();
+        }
+
+        public static UniTask WaitDeCompress()
+        {
+            return instance.mDecompressAssets.WaitDecompress();
         }
     }
 }

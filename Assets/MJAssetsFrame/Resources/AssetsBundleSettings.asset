@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad8b89ef0654996458fe642a34c20d61, type: 3}
   m_Name: AssetsBundleSettings
   m_EditorClassIdentifier: 
-  AssetDownLoadUrl: http://127.0.0.1
+  AssetDownLoadUrl: http://127.0.0.1/HotAssets/
   bundleHotType: 1
   MAX_THREAD_COUNT: 3
   bundleEnctypt:
@@ -20,4 +20,4 @@ MonoBehaviour:
     encryptKey: 
   buildTarget: 5
   buildAssetBundleOptions: 256
-  BundlePostfix: .unity
+  BundlePostfix: .ab

@@ -52,10 +52,56 @@ namespace MJ.AssetFrameWork.ABFrame
         [Header("AssetBundle打包格式")]
         public BuildAssetBundleOptions buildAssetBundleOptions = BuildAssetBundleOptions.ChunkBasedCompression;
 
-
-
         [Header("AssetBundle文件名后缀")]
         public string BundlePostfix = ".unity";
+
+
+
+
+        /// <summary>
+        /// AssetBundle解压路径
+        /// </summary>
+        private string BuiltinDeComprssPath { get { return Application.persistentDataPath + "/DeCompressAssets/"; } }
+
+        /// <summary>
+        /// AssetBundle内嵌文件路径
+        /// </summary>
+        private string BuiltinAssetsPath { get { return Application.streamingAssetsPath + "/AssetBundle/"; } }
+
+        /// <summary>
+        /// 热更文件储存路径
+        /// </summary>
+        private string HotAssetsPath { get { return Application.streamingAssetsPath + "/HotAssets/"; } }
+
+        /// <summary>
+        /// 获取解压文件路径
+        /// </summary>
+        /// <param name="bundleModuleEnum"></param>
+        /// <returns></returns>
+        public string GetAssetsDeCompressPath(BundleModuleEnum bundleModuleEnum)
+        {
+            return BuiltinDeComprssPath + bundleModuleEnum + "/";
+        }
+
+        /// <summary>
+        /// 获取资源内嵌的路径
+        /// </summary>
+        /// <param name="bundleModuleEnum"></param>
+        /// <returns></returns>
+        public string GetAssetsBuiltinBundlePath(BundleModuleEnum bundleModuleEnum)
+        {
+            return BuiltinAssetsPath + bundleModuleEnum + "/";
+        }
+
+        /// <summary>
+        /// 获取热更文件存储路径
+        /// </summary>
+        /// <param name="bundleModuleEnum"></param>
+        /// <returns></returns>
+        public string GetHotAssetsPath(BundleModuleEnum bundleModuleEnum)
+        {
+            return HotAssetsPath + bundleModuleEnum + "/";
+        }
     }
 
     /// <summary>

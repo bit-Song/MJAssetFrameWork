@@ -15,11 +15,6 @@ namespace MJ.AssetFrameWork.ABFrame
         public BundleModuleEnum bundleModule;
 
         public UniTaskCompletionSource tcs;
-
-        //public Action<BundleModuleEnum> startHot;
-        //public Action<BundleModuleEnum> hotFinish;
-
-        //public Action<BundleModuleEnum, float> hotAssetsProgressCallBack;
     }
 
 
@@ -158,8 +153,6 @@ namespace MJ.AssetFrameWork.ABFrame
             if (waitDownLoadModuleQueue.Count > 0)
             {
                 WaitDownLoadModule waitDownLoadModule = waitDownLoadModuleQueue.Dequeue();
-                //HotAssets(waitDownLoadModule.bundleModule, waitDownLoadModule.startHot, waitDownLoadModule.hotFinish, null).Forget();
-                //HotAssets(waitDownLoadModule.bundleModule);
                 waitDownLoadModule.tcs.TrySetResult();  //»½ÐÑµÈ´ýÖÐµÄHotAssets
             }
             else
