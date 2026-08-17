@@ -1,6 +1,9 @@
 using Cysharp.Threading.Tasks;
 using MJ.AssetFrameWork.ABFrame;
+using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class Test : MonoBehaviour
 {
@@ -9,11 +12,8 @@ public class Test : MonoBehaviour
         Debug.Log(Application.persistentDataPath);
         MJAssetsABFrame.Instance.InitFrameWork();
     }
-    private void Start()
+    private async Task Start()
     {
         HotUpdateManager.Instance.HotAndPackAssets(BundleModuleEnum.GameItem).Forget();
-
-
-
     }
 }

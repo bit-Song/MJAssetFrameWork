@@ -28,12 +28,17 @@ namespace MJ.AssetFrameWork.ABFrame
         //需要下载的资源列表
         public List<HotFileInfo> mNeedDownLoadAssetList = new List<HotFileInfo>();
         //所有热更的资源列表
-        public List<HotFileInfo> mAllDownLoadAssetList = new List<HotFileInfo>();
+        public List<HotFileInfo> mAllHotAssetList = new List<HotFileInfo>();
 
         //服务端资源清单
         private HotAssetsManifest mServerHotAssetsManifest;
         //本地资源清单
         private HotAssetsManifest mLocalHotAssetsManifest;
+
+        /// <summary>
+        /// 所有热更资源的长度
+        /// </summary>
+        public int HotAssetCount => mAllHotAssetList.Count;
 
         /// <summary>
         /// 热更公告
@@ -71,7 +76,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             get
             {
-                return Application.persistentDataPath+"/HotAssets/" + CurBundleModuleEnum + "/";
+                return Application.persistentDataPath + "/HotAssets/" + CurBundleModuleEnum + "/";
             }
         }
 
@@ -86,7 +91,7 @@ namespace MJ.AssetFrameWork.ABFrame
         public async UniTask StartHotAssets(bool isCheckAssetsVersion = true)
         {
             mNeedDownLoadAssetList.Clear();
-            mAllDownLoadAssetList.Clear();
+            mAllHotAssetList.Clear();
 
 
             //创建一个TCS 捕获所有文件下载完成的命令
@@ -235,7 +240,7 @@ namespace MJ.AssetFrameWork.ABFrame
             {
                 //获取本地AssetBundle文件路径
                 string localFilePath = HotAssetsSavePath + item.abName;
-                mAllDownLoadAssetList.Add(item);
+                mAllHotAssetList.Add(item);
                 //TODO MD5
                 //如果本地文件不存在或者本地文件与服务端不一致 需要热更
                 if (!File.Exists(localFilePath) || item.md5 != MD5.GetMd5FromFile(localFilePath))
@@ -328,6 +333,20 @@ namespace MJ.AssetFrameWork.ABFrame
         }
         #endregion
 
-    }
+        /// <summary>
+        /// 判断热更文件是否存在
+        /// </summary>
+        /// <param name="bundleName"></param>
+        public bool HotAssetsIsExists(string bundleName)
+        {
+            foreach (var item in mAllHotAssetList)
+            {
+                if (string.Equals(bundleName, item.abName))
+                    return true;
+            }
+            return false;
+        }
 
+
+    }
 }

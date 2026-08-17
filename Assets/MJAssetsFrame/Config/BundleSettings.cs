@@ -14,6 +14,14 @@ namespace MJ.AssetFrameWork.ABFrame
         Hot,
     }
 
+    /// <summary>
+    /// 资源加载模式
+    /// </summary>
+    public enum E_LoadAssetEnum
+    {
+        Editor,
+        AssetBundle,
+    }
 
 
     [CreateAssetMenu(menuName = "ScriptableObject/AssetFrame/AssetsBundleSettings", fileName = "AssetsBundleSettings")]
@@ -38,6 +46,9 @@ namespace MJ.AssetFrameWork.ABFrame
 
         [Header("资源热更模式")]
         public E_BundleHotEnum bundleHotType;
+
+        [Header("资源加载模式")]
+        public E_LoadAssetEnum loadAssetType;
 
         [Header("最大下载线程数量")]
         public int MAX_THREAD_COUNT;
