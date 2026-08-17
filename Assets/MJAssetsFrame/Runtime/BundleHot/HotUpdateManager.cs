@@ -9,7 +9,7 @@ using UnityEngine;
 namespace MJ.AssetFrameWork.ABFrame
 {
     /// <summary>
-    /// ÈÈ¸üÁ÷³Ì´úÂë
+    /// çƒ­æ›´æµç¨‹ä»£ç 
     /// </summary>
     public class HotUpdateManager
     {
@@ -19,7 +19,7 @@ namespace MJ.AssetFrameWork.ABFrame
         private HotAssetsWindow mHotAssetsWindow;
 
         /// <summary>
-        /// ÈÈ¸ü²¢ÇÒ½âÑ¹Ä£¿é
+        /// çƒ­æ›´å¹¶ä¸”è§£å‹æ¨¡å—
         /// </summary>
         /// <param name="bundleModuleEnum"></param>
         public async UniTask HotAndPackAssets(BundleModuleEnum bundleModuleEnum)
@@ -27,15 +27,15 @@ namespace MJ.AssetFrameWork.ABFrame
 
             mHotAssetsWindow = InstantiateResourcesObj<HotAssetsWindow>("HotAssetsWindow");
 
-            //¿ªÊ¼½âÑ¹ÓÎÏ·ÄÚÇ¶×ÊÔ´
+            //å¼€å§‹è§£å‹æ¸¸æˆå†…åµŒèµ„æº
             //IDecompressAssets decompress = await MJAssetsABFrame.StartDeCompressBuiltinFile(bundleModuleEnum);
             IDecompressAssets decompress = MJAssetsABFrame.StartDeCompressBuiltinFile(bundleModuleEnum);
             mHotAssetsWindow.ShowDecompressProgress(decompress);
-            //µÈ´ı½âÑ¹
+            //ç­‰å¾…è§£å‹
             await MJAssetsABFrame.WaitDeCompress();
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
-                InstantiateResourcesObj<UpdateTipsWindow>("UpdatetipsWindow").InitView("µ±Ç°ÎŞÍøÂç£¬Çë¼ì²âºóÖØÊÔ", () => { NotNetButtonClick(bundleModuleEnum).Forget(); }, () => { NotNetButtonClick(bundleModuleEnum).Forget(); });
+                InstantiateResourcesObj<UpdateTipsWindow>("UpdatetipsWindow").InitView("å½“å‰æ— ç½‘ç»œï¼Œè¯·æ£€æµ‹åé‡è¯•", () => { NotNetButtonClick(bundleModuleEnum).Forget(); }, () => { NotNetButtonClick(bundleModuleEnum).Forget(); });
                 return;
             }
             else
@@ -47,7 +47,7 @@ namespace MJ.AssetFrameWork.ABFrame
 
         public async UniTask NotNetButtonClick(BundleModuleEnum bundleModuleEnum)
         {
-            //Èç¹ûµ±Ç°ÓÃ»§Ã»ÓĞÍøÂç¾Íµ¯³öµ¯´°ÌáÊ¾
+            //å¦‚æœå½“å‰ç”¨æˆ·æ²¡æœ‰ç½‘ç»œå°±å¼¹å‡ºå¼¹çª—æç¤º
             if (Application.internetReachability != NetworkReachability.NotReachable)
             {
                 CheackAssetsVersion(bundleModuleEnum).Forget();
@@ -60,7 +60,7 @@ namespace MJ.AssetFrameWork.ABFrame
 
 
         /// <summary>
-        /// ¼ì²â×ÊÔ´°æ±¾
+        /// æ£€æµ‹èµ„æºç‰ˆæœ¬
         /// </summary>
         /// <param name="bundleModuleEnum"></param>
         public async UniTask CheackAssetsVersion(BundleModuleEnum bundleModuleEnum, bool isCheckVersion = true)
@@ -69,61 +69,63 @@ namespace MJ.AssetFrameWork.ABFrame
 
             if (checkVersionResult.isHot)
             {
-                //µ±ÓÃ»§Ê¹ÓÃÁ÷Á¿Ê±£¬ĞèÒªÑ¯ÎÊÓÃ»§ÊÇ·ñĞèÒª¸üĞÂ×ÊÔ´
+                //å½“ç”¨æˆ·ä½¿ç”¨æµé‡æ—¶ï¼Œéœ€è¦è¯¢é—®ç”¨æˆ·æ˜¯å¦éœ€è¦æ›´æ–°èµ„æº
                 if (Application.internetReachability == NetworkReachability.ReachableViaCarrierDataNetwork || Application.platform == RuntimePlatform.WindowsEditor || Application.platform == RuntimePlatform.OSXEditor)
                 {
                     UpdateTipsWindow updateTipsWindow = InstantiateResourcesObj<UpdateTipsWindow>("UpdateTipsWindow");
-                    updateTipsWindow.InitView("µ±Ç°ÓĞ" + checkVersionResult.sizeM.ToString("F2") + "M×ÊÔ´ĞèÒª¸üĞÂ£¬ÊÇ·ñ¸üĞÂ",
+                    updateTipsWindow.InitView("å½“å‰æœ‰" + checkVersionResult.sizeM.ToString("F2") + "Mèµ„æºéœ€è¦æ›´æ–°ï¼Œæ˜¯å¦æ›´æ–°",
                         async () =>
                         {
                             OnStartHotAssetsCallBack(bundleModuleEnum);
-                            //È·ÈÏ¸üĞÂ
+                            //ç¡®è®¤æ›´æ–°
                             await StartHotAssets(bundleModuleEnum, isCheckVersion);
-                            //Íê³É»Øµ÷
+                            //å®Œæˆå›è°ƒ
                             OnHotFinishCallBack(bundleModuleEnum);
                         },
                         () =>
                         {
-                            //ÍË³öÓÎÏ·
+                            //é€€å‡ºæ¸¸æˆ
                             Application.Quit();
                         });
                 }
                 else
                 {
                     await StartHotAssets(bundleModuleEnum, isCheckVersion);
-                    //Íê³É»Øµ÷
+                    //å®Œæˆå›è°ƒ
                     OnHotFinishCallBack(bundleModuleEnum);
                 }
             }
             else
             {
-                //Èç¹û²»ĞèÒªÈÈ¸üËµÃ÷ÓÃ»§ÒÑ¾­¸üĞÂ¹ıÁË,×ÊÔ´ÊÇ×îĞÂµÄ£¬¿ÉÒÔÖ±½Ó½øÈëÓÎÏ·
+                //å¦‚æœä¸éœ€è¦çƒ­æ›´è¯´æ˜ç”¨æˆ·å·²ç»æ›´æ–°è¿‡äº†,èµ„æºæ˜¯æœ€æ–°çš„ï¼Œå¯ä»¥ç›´æ¥è¿›å…¥æ¸¸æˆ
                 OnHotFinishCallBack(bundleModuleEnum);
 
             }
         }
 
         /// <summary>
-        /// ¿ªÊ¼ÈÈ¸ü×ÊÔ´
+        /// å¼€å§‹çƒ­æ›´èµ„æº
         /// </summary>
         /// <param name="bundleModuleEnum"></param>
         public async UniTask StartHotAssets(BundleModuleEnum bundleModuleEnum, bool isCheckVersion = true)
         {
-            //¸üĞÂÈÈ¸ü½ø¶È
+            //æ›´æ–°çƒ­æ›´è¿›åº¦
             mHotAssetsWindow.ShowHotAssetsProgress(MJAssetsABFrame.GetHotAssetsModule(bundleModuleEnum));
             await MJAssetsABFrame.HotAssets(bundleModuleEnum, isCheckVersion);
         }
 
         /// <summary>
-        /// ÈÈ¸üÍê³É»Øµ÷
+        /// çƒ­æ›´å®Œæˆå›è°ƒ
         /// </summary>
         public void OnHotFinishCallBack(BundleModuleEnum bundleModuleEnum)
         {
-            Debug.Log("×ÊÔ´ÈÈ¸üÍê³É OnHotFinishCallBack ¡£¡£¡£¡£");
+            Debug.Log("èµ„æºçƒ­æ›´å®Œæˆ OnHotFinishCallBack ã€‚ã€‚ã€‚ã€‚");
+            //åŠ è½½èµ„æºé…ç½®æ–‡ä»¶
+            AssetBundleManager.Instance.LoadAssetBundelConfig(bundleModuleEnum);
 
         }
         /// <summary>
-        /// ÈÈ¸ü¿ªÊ¼»Øµ÷
+        /// çƒ­æ›´å¼€å§‹å›è°ƒ
         /// </summary>
         /// <param name="bundleModuleEnum"></param>
         public void OnStartHotAssetsCallBack(BundleModuleEnum bundleModuleEnum)

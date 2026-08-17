@@ -1,5 +1,5 @@
 {
-  "updateNotice": "输入本次热更描述...a",
+  "updateNotice": "输入本次热更描述...333",
   "downLoadUrl": "http://127.0.0.1/HotAssets/GameItem/1/StandaloneWindows",
   "hotAssetsPatcheList": [
     {
@@ -7,8 +7,8 @@
       "hotAssetsList": [
         {
           "abName": "gameitembundleconfig.ab",
-          "md5": "1A473E1F17B0E75A988C5FFECF7F7EFB",
-          "size": 3.006836
+          "md5": "6489B348047298BA944D3AA2723E4F55",
+          "size": 3.02636719
         },
         {
           "abName": "gameitem_6001.ab",

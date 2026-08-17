@@ -431,7 +431,8 @@ namespace MJ.AssetFrameWork.ABFrame
             //生成AsestBundle配置文件。序列化
             string json = JsonConvert.SerializeObject(config, Formatting.Indented);
             //生成位置
-            string bundleConfigPath = Application.dataPath + "/" + bundleModuleEnum.ToString().ToLower() + "assetbundleconfig.json";
+            //string bundleConfigPath = Application.dataPath + "/" + bundleModuleEnum.ToString().ToLower() + "assetbundleconfig.json";
+            string bundleConfigPath = Application.dataPath + "/" + bundleModuleEnum.ToString().ToLower() + "bundleconfig.json";
             StreamWriter writer = File.CreateText(bundleConfigPath);
             writer.Write(json);
             writer.Dispose();

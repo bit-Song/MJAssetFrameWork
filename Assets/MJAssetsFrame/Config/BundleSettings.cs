@@ -71,7 +71,7 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <summary>
         /// 热更文件储存路径
         /// </summary>
-        private string HotAssetsPath { get { return Application.streamingAssetsPath + "/HotAssets/"; } }
+        private string HotAssetsPath { get { return Application.persistentDataPath + "/HotAssets/"; } }
 
         /// <summary>
         /// 获取解压文件路径
