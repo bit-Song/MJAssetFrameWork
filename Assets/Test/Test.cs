@@ -12,8 +12,17 @@ public class Test : MonoBehaviour
         Debug.Log(Application.persistentDataPath);
         MJAssetsABFrame.Instance.InitFrameWork();
     }
-    private async Task Start()
+    private async void Start()
     {
-        HotUpdateManager.Instance.HotAndPackAssets(BundleModuleEnum.GameItem).Forget();
+        await HotUpdateManager.Instance.HotAndPackAssets(BundleModuleEnum.Hall);
+        //等待资源热更完成后加载物体
+        Debug.Log("开始加载");
+        StartGame();
     }
+
+    public void StartGame()
+    {
+        MJAssetsABFrame.Instantiate(@"Assets/BundleDemo/Hall/Prefab/LoginWindow");
+    }
+
 }

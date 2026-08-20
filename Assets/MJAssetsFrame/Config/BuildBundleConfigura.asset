@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   AssetBundleConfig:
   - bundleid: 0
-    moduleName: GameItem
+    moduleName: Hall
     isBuild: 1
-    lastClickBtnTime: 2104.4143
+    lastClickBtnTime: 14699.098
     prefabPathArr:
-    - Assets/BundleDemo/GameItem/6002
+    - Assets/BundleDemo/Hall/Prefab
     rootFolderPathArr:
-    - Assets/BundleDemo/GameItem
+    - Assets/BundleDemo/Hall/Textures
     signFolderPathArr: []

@@ -39,6 +39,10 @@ namespace MJ.AssetFrameWork.ABFrame
         //等待下载的队列
         private Queue<WaitDownLoadModule> waitDownLoadModuleQueue = new Queue<WaitDownLoadModule>();
 
+        /// <summary>
+        /// 单个AssetBundle模块下载完成
+        /// </summary>
+        public static Action<HotFileInfo> DownLoadBundleFinish;
 
         public async UniTask HotAssets(BundleModuleEnum bundleModule, bool isCheckVersion = true)
         {

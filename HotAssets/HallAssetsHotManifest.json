@@ -1,0 +1,66 @@
+{
+  "updateNotice": "新增登录窗口",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/Hall/2/StandaloneWindows",
+  "hotAssetsPatcheList": [
+    {
+      "patchVersion": 2,
+      "hotAssetsList": [
+        {
+          "abName": "hallbundleconfig.ab",
+          "md5": "6581223B0E11D12D77257997BFA0D6C4",
+          "size": 2.93652344
+        },
+        {
+          "abName": "hall_examplewindow.ab",
+          "md5": "8CFD81C62330EC5EB4D00AD787C8A14F",
+          "size": 9.545898
+        },
+        {
+          "abName": "hall_exshopitem.ab",
+          "md5": "A611EF0C032650E25A775137436A1268",
+          "size": 4.165039
+        },
+        {
+          "abName": "hall_exshopwindow.ab",
+          "md5": "F9DF5114E8DF37C0194C30DCEE48B3DE",
+          "size": 13.3818359
+        },
+        {
+          "abName": "hall_hall.ab",
+          "md5": "41FBE6EEED8BD4017F2583FA658759B5",
+          "size": 1120.06055
+        },
+        {
+          "abName": "hall_hallwindow.ab",
+          "md5": "EC40F4F6C4A5128807B3C63F0736F78A",
+          "size": 22.2539063
+        },
+        {
+          "abName": "hall_loading.ab",
+          "md5": "AC0E13BFB0CC067195820E4655D7BEF5",
+          "size": 326.123047
+        },
+        {
+          "abName": "hall_login.ab",
+          "md5": "8D1BAC9AE1773DF54048B62D6C1C57ED",
+          "size": 281.703125
+        },
+        {
+          "abName": "hall_loginwindow.ab",
+          "md5": "E7F827F28ED317C378D31655F5264A47",
+          "size": 13.8769531
+        },
+        {
+          "abName": "hall_shop.ab",
+          "md5": "2674BA6CA5D4ABA2B86584076BB5D50A",
+          "size": 234.564453
+        },
+        {
+          "abName": "hall_testobj.ab",
+          "md5": "4C0D4AA29ECA3ABDAE40F72E63F7279B",
+          "size": 3.63671875
+        }
+      ]
+    }
+  ]
+}

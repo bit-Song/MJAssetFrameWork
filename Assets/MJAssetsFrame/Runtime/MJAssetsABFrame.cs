@@ -7,16 +7,23 @@ namespace MJ.AssetFrameWork.ABFrame
 {
     public partial class MJAssetsABFrame : MJABFrameBase
     {
+        public static Transform RecyclObjRoot { get; private set; }
         private IHotAssets mHotAssets = null;
-
+        private IResourcesInterface mResources = null;
         private IDecompressAssets mDecompressAssets = null;
         /// <summary>
         /// ³õÊ¼»¯¿ò¼Ü
         /// </summary>
         public void InitFrameWork()
         {
+            GameObject recyclObjRoot = new GameObject("RecyclObjRoot");
+            RecyclObjRoot = recyclObjRoot.transform;
+            DontDestroyOnLoad(recyclObjRoot);
+
             mHotAssets = new HotAssetsManager();
             mDecompressAssets = new AssetsDecompressManager();
+            mResources = new ResourcesManager();
+            mResources.Initlizate();
         }
 
         public void Update()

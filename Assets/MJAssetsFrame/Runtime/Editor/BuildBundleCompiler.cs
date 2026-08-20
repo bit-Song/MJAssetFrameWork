@@ -411,7 +411,7 @@ namespace MJ.AssetFrameWork.ABFrame
                     {
                         //如果依赖项不是当前的这个文件，以及依赖项不是cs脚本 就进行处理
                         //防止重复添加自己
-                        if (!dePath.Equals(filePath) && dePath.EndsWith(".cs") == false)
+                        if (!dePath.Equals(filePath) && !dePath.EndsWith(".cs"))
                         {
                             string assetBundleName = "";
                             if (allBundleFilePathDic.TryGetValue(dePath, out assetBundleName))

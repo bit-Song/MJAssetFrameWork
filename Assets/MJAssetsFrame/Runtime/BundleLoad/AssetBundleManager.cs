@@ -146,6 +146,25 @@ namespace MJ.AssetFrameWork.ABFrame
                 Debug.LogError("Load AssetBundleConfig Failed,Exception:" + e.Message);
             }
         }
+
+        /// <summary>
+        /// 根据assetbundle名称 查询该assetbundle中有哪些资源
+        /// </summary>
+        /// <param name="bundleName"></param>
+        /// <returns></returns>
+        public List<BundleItem> GetBundleItemByAbName(string bundleName)
+        {
+            List<BundleItem> itemList = new List<BundleItem>();
+            foreach (var item in mAllBundleAssetDic.Values)
+            {
+                if (string.Equals(item.bundleName, bundleName))
+                {
+                    itemList.Add(item);
+                }
+            }
+            return itemList;
+        }
+
         /// <summary>
         /// 通过资源路径中的crc加载该资源所在的AssetBundle
         /// </summary>
@@ -182,7 +201,6 @@ namespace MJ.AssetFrameWork.ABFrame
                 return null;
             }
         }
-
 
         /// <summary>
         /// 通过AssetbundleName加载AssetBundle

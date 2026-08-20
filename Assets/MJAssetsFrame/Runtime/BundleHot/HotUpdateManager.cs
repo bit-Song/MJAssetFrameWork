@@ -122,7 +122,7 @@ namespace MJ.AssetFrameWork.ABFrame
             Debug.Log("资源热更完成 OnHotFinishCallBack 。。。。");
             //加载资源配置文件
             AssetBundleManager.Instance.LoadAssetBundelConfig(bundleModuleEnum);
-
+            InitGameEnv().Forget();
         }
         /// <summary>
         /// 热更开始回调
@@ -133,6 +133,49 @@ namespace MJ.AssetFrameWork.ABFrame
 
         }
 
+        /// <summary>
+        /// 初始化游戏环境
+        /// </summary>
+        /// <returns></returns>
+        private async UniTask InitGameEnv()
+        {
+            for (int i = 0; i < 100; i++)
+            {
+                mHotAssetsWindow.progressSlider.value = i / 100.0f;
+                if (i == 1)
+                {
+                    mHotAssetsWindow.progressText.text = "加载本地资源...";
+                    Debug.Log("加载本地资源");
+                }
+                else if (i == 20)
+                {
+                    mHotAssetsWindow.progressText.text = "加载配置文件...";
+                }
+                else if (i == 70)
+                {
+                    mHotAssetsWindow.progressText.text = "加载AssetBundle配置文件...";
+                    //AssetBundleManager.Instance.LoadAssetBundelConfig(BundleModuleEnum.Hall);
+                }
+                else if (i == 90)
+                {
+                    mHotAssetsWindow.progressText.text = "加载游戏配置文件...";
+                    LoadGameConfig();
+                }
+                else if (i == 99)
+                {
+                    mHotAssetsWindow.progressText.text = "加载地图场景...";
+                }
+                await UniTask.Yield();
+            }
+            GameObject.Destroy(mHotAssetsWindow);
+        }
+        /// <summary>
+        /// 加载游戏配置文件
+        /// </summary>
+        public void LoadGameConfig()
+        {
+
+        }
         public T InstantiateResourcesObj<T>(string prefabName)
         {
             return GameObject.Instantiate(Resources.Load<GameObject>(prefabName)).GetComponent<T>();

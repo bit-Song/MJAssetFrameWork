@@ -129,7 +129,7 @@ namespace MJ.AssetFrameWork.ABFrame
             {
                 HotFileInfo hotFile = mNeedDownLoadAssetList[i];
                 //说明是配置文件需要优先下载
-                if (hotFile.abName.Contains("config"))
+                if (hotFile.abName.Contains("bundleconfig"))
                 {
                     downLoadList.Insert(0, hotFile);
                 }
@@ -314,6 +314,8 @@ namespace MJ.AssetFrameWork.ABFrame
             {
 
             }
+            Debug.Log("更新完成abName：" + hotFileInfo.abName);
+            HotAssetsManager.DownLoadBundleFinish?.Invoke(hotFileInfo);
         }
         public void DownLoadAssetBundleFailed(HotFileInfo hotFileInfo)
         {
