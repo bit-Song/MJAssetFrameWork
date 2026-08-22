@@ -42,16 +42,13 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         public void StartThreadDownLoadQueue()
         {
-            lock (mAllDownLoadThreadList)
+            for (int i = 0; i < MAX_THREAD_COUNT; i++)
             {
-                for (int i = 0; i < MAX_THREAD_COUNT; i++)
+                if (downLoadQueue.Count > 0)
                 {
-                    if (downLoadQueue.Count > 0)
-                    {
-                        Debug.Log("Start DownLoad AssetBundle MAX_THREAD_COUNT:" + MAX_THREAD_COUNT);
-                        //并行下载处理
-                        StartDownLoadNextBundle().Forget();
-                    }
+                    Debug.Log("Start DownLoad AssetBundle MAX_THREAD_COUNT:" + MAX_THREAD_COUNT);
+                    //并行下载处理
+                    StartDownLoadNextBundle().Forget();
                 }
             }
         }
@@ -60,22 +57,19 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         public void DownLoadNextBundle()
         {
-            lock (mAllDownLoadThreadList)
-            {
-                if (mIsFinished)
-                    return;
+            if (mIsFinished)
+                return;
 
-                //队列还有文件，启动下一个下载
-                if (downLoadQueue.Count > 0)
-                {
-                    StartDownLoadNextBundle().Forget();
-                }
-                //队列空了且没有正在下载的线程，说明全部完成
-                else if (mAllDownLoadThreadList.Count == 0)
-                {
-                    mIsFinished = true;
-                    curHotAssetsModule.DownLoadAssetBundleFinish();
-                }
+            //队列还有文件，启动下一个下载
+            if (downLoadQueue.Count > 0)
+            {
+                StartDownLoadNextBundle().Forget();
+            }
+            //队列空了且没有正在下载的线程，说明全部完成
+            else if (mAllDownLoadThreadList.Count == 0)
+            {
+                mIsFinished = true;
+                curHotAssetsModule.DownLoadAssetBundleFinish();
             }
         }
 
@@ -84,11 +78,9 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         public void RemoveDownLoadThread(DownLoadThread downLoadThread)
         {
-            lock (mAllDownLoadThreadList)
-            {
-                if (mAllDownLoadThreadList.Contains(downLoadThread))
-                    mAllDownLoadThreadList.Remove(downLoadThread);
-            }
+            if (mAllDownLoadThreadList.Contains(downLoadThread))
+                mAllDownLoadThreadList.Remove(downLoadThread);
+
         }
         /// <summary>
         /// 开始下载下一个AssetBundle

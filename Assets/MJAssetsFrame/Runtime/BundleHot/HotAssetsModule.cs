@@ -106,8 +106,6 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             //设置状态为正在下载
             CurDownloadStateEnum = E_DownloadState.Downloading;
-            //mNeedDownLoadAssetList.Clear();
-            //mAllHotAssetList.Clear();
 
             //创建一个TCS 捕获所有文件下载完成的命令
             var tcs = new UniTaskCompletionSource();
@@ -286,7 +284,8 @@ namespace MJ.AssetFrameWork.ABFrame
                 return true;
             //判断本地资源清单与服务器清单的资源数量是否相同 如果不同说明需要热更
             mLocalHotAssetsManifest = JsonConvert.DeserializeObject<HotAssetsManifest>(File.ReadAllText(mLocalHotAssetManisetPath));
-            if (mLocalHotAssetsManifest.hotAssetsPatcheList.Count == 0 && mServerHotAssetsManifest.hotAssetsPatcheList.Count != 0)
+            if ((mLocalHotAssetsManifest.hotAssetsPatcheList.Count == 0 && mServerHotAssetsManifest.hotAssetsPatcheList.Count != 0)
+                || mLocalHotAssetsManifest.hotAssetsPatcheList.Count != mServerHotAssetsManifest.hotAssetsPatcheList.Count)
                 return true;
 
             //获取本地热更补丁的最后一个补丁

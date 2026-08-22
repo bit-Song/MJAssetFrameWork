@@ -67,30 +67,35 @@ namespace MJ.AssetFrameWork.ABFrame
                 }
                 //处理线程均衡
                 MultipleThreadBalancing();
+                //assetsModule.CurDownloadStateEnum = E_DownloadState.Downloading;
                 await assetsModule.StartHotAssets(isCheckVersion);
                 HotModuleAssetsFinish(bundleModule);
             }
             else
             {
-                var tcs = new UniTaskCompletionSource();
-                waitDownLoadModuleQueue.Enqueue(new WaitDownLoadModule()
+                
+                // 循环等待，直到真正有空位
+                while (downLoadingAssetsModuleDic.Count >= MAX_THREAD_COUNT)
                 {
-                    bundleModule = bundleModule,
-                    tcs = tcs
-                });
-                assetsModule.CurDownloadStateEnum = E_DownloadState.Waiting;
-
-                await tcs.Task;
-
+                    var tcs = new UniTaskCompletionSource();
+                    waitDownLoadModuleQueue.Enqueue(new WaitDownLoadModule()
+                    {
+                        bundleModule = bundleModule,
+                        tcs = tcs
+                    });
+                    assetsModule.CurDownloadStateEnum = E_DownloadState.Waiting;
+                    await tcs.Task;
+                }
+                // 醒来后再次确认有空位，才真正加入
                 assetsModule.CurDownloadStateEnum = E_DownloadState.Downloading;
 
-                downLoadingAssetsModuleDic.Add(bundleModule, assetsModule);
+                if (!downLoadingAssetsModuleDic.ContainsKey(bundleModule))
+                    downLoadingAssetsModuleDic.Add(bundleModule, assetsModule);
                 if (!downLoadAssetsModuleList.Contains(assetsModule))
                     downLoadAssetsModuleList.Add(assetsModule);
                 MultipleThreadBalancing();
                 await assetsModule.StartHotAssets(isCheckVersion);
                 HotModuleAssetsFinish(bundleModule);
-
             }
         }
 
@@ -123,7 +128,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             HotAssetsModule assetsModule = GetOrNewAssetModule(bundleModule);
             CheckVersionResult checkVersionResult = await assetsModule.CheckAssetsVersion();
-            
+
             return checkVersionResult;
         }
 

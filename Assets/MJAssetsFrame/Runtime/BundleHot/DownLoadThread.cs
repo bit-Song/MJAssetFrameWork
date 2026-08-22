@@ -1,9 +1,6 @@
 using Cysharp.Threading.Tasks;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -58,51 +55,90 @@ namespace MJ.AssetFrameWork.ABFrame
             for (int i = 0; i < Max_TRY_DOWNLOAD_COUNT; i++)
             {
                 mDurDownLoadCount++;
-                bool success = false;
-                string errorMsg = null;
-                float downloadedSize = 0;
+                // 清理上次失败残留的半成品文件
+                if (File.Exists(mFileSavePath))
+                    File.Delete(mFileSavePath);
 
-                await UniTask.RunOnThreadPool(() =>
+                using (UnityWebRequest request = UnityWebRequest.Get(mDownLoadUrl))
                 {
-                    try
-                    {
-                        Debug.Log("StartDownLoad ModuleEnum:" + mCurHotAssetsMoudle.CurBundleModuleEnum + "AssetBudnle Url:" + mDownLoadUrl);
-                        HttpWebRequest request = WebRequest.Create(mDownLoadUrl) as HttpWebRequest;
-                        request.Method = "Get";
-                        
-                        using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
-                        using (var stream = response.GetResponseStream())
-                        using (var fileStream = File.Create(mFileSavePath))
-                        {
-                            byte[] buffer = new byte[1024];
-                            int size = stream.Read(buffer, 0, buffer.Length);
+                    request.downloadHandler = new DownloadHandlerFile(mFileSavePath);
+                    request.timeout = 30;
 
-                            while (size > 0)
-                            {
-                                fileStream.Write(buffer, 0, size);
-                                size = stream.Read(buffer, 0, buffer.Length);
-                                downLoadSizeKb += size;
-                                downloadedSize += size;
-                                //await UniTask.Delay(10);
-                            }
-                            success = true;
-                            Debug.Log("DownLoadSuccess MoudleEnmu:" + mCurHotAssetsMoudle.CurBundleModuleEnum + "AssetBundleUrl:" + mDownLoadUrl + " FileSavePath:" + mFileSavePath);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        errorMsg = e.ToString();
-                    }
-                });
+                    Debug.Log("StartDownLoad ModuleEnum:" + mCurHotAssetsMoudle.CurBundleModuleEnum + " AssetBundle Url:" + mDownLoadUrl);
 
-                if (success)
-                {
-                    mCurHotAssetsMoudle.mAssetDownLoadSizeM += downloadedSize / 1024f / 1024f;
-                    return true;   // 成功
+                    var operation = request.SendWebRequest();
+
+                    while (!operation.isDone)
+                    {
+                        downLoadSizeKb = request.downloadedBytes / 1024f;
+                        await UniTask.Yield();
+                    }
+
+                    if (request.result == UnityWebRequest.Result.Success)
+                    {
+                        float downloadedSizeM = request.downloadedBytes / 1024f / 1024f;
+                        mCurHotAssetsMoudle.mAssetDownLoadSizeM += downloadedSizeM;
+                        downLoadSizeKb = request.downloadedBytes / 1024f;
+                        Debug.Log("DownLoadSuccess ModuleEnum:" + mCurHotAssetsMoudle.CurBundleModuleEnum + " AssetBundleUrl:" + mDownLoadUrl + " FileSavePath:" + mFileSavePath);
+                        return true;
+                    }
+
+                    Debug.LogError("文件下载失败，正在重新下载，当前尝试下载次数：" + mDurDownLoadCount + "\r\nURL:" + mDownLoadUrl + "\r\nError:" + request.error);
                 }
-                Debug.LogError("文件下载失败，正在重新下载，当前尝试下载次数：" + mDurDownLoadCount + "\r\nURL:" + mDownLoadUrl);
             }
-            return false;  // 全部失败
+            return false;
+
+
+
+
+            //for (int i = 0; i < Max_TRY_DOWNLOAD_COUNT; i++)
+            //{
+            //    mDurDownLoadCount++;
+            //    bool success = false;
+            //    string errorMsg = null;
+            //    float downloadedSize = 0;
+
+            //    await UniTask.RunOnThreadPool(() =>
+            //    {
+            //        try
+            //        {
+            //            Debug.Log("StartDownLoad ModuleEnum:" + mCurHotAssetsMoudle.CurBundleModuleEnum + "AssetBudnle Url:" + mDownLoadUrl);
+            //            HttpWebRequest request = WebRequest.Create(mDownLoadUrl) as HttpWebRequest;
+            //            request.Method = "Get";
+
+            //            using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
+            //            using (var stream = response.GetResponseStream())
+            //            using (var fileStream = File.Create(mFileSavePath))
+            //            {
+            //                byte[] buffer = new byte[1024];
+            //                int size = stream.Read(buffer, 0, buffer.Length);
+
+            //                while (size > 0)
+            //                {
+            //                    fileStream.Write(buffer, 0, size);
+            //                    size = stream.Read(buffer, 0, buffer.Length);
+            //                    downLoadSizeKb += size;
+            //                    downloadedSize += size;
+            //                    //await UniTask.Delay(10);
+            //                }
+            //                success = true;
+            //                Debug.Log("DownLoadSuccess MoudleEnmu:" + mCurHotAssetsMoudle.CurBundleModuleEnum + "AssetBundleUrl:" + mDownLoadUrl + " FileSavePath:" + mFileSavePath);
+            //            }
+            //        }
+            //        catch (Exception e)
+            //        {
+            //            errorMsg = e.ToString();
+            //        }
+            //    });
+
+            //    if (success)
+            //    {
+            //        mCurHotAssetsMoudle.mAssetDownLoadSizeM += downloadedSize / 1024f / 1024f;
+            //        return true;   // 成功
+            //    }
+            //    Debug.LogError("文件下载失败，正在重新下载，当前尝试下载次数：" + mDurDownLoadCount + "\r\nURL:" + mDownLoadUrl);
+            //}
+            //return false;  // 全部失败
         }
     }
 

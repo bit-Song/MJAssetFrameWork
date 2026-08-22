@@ -27,15 +27,13 @@ namespace MJ.AssetFrameWork.ABFrame
 
             mHotAssetsWindow = InstantiateResourcesObj<HotAssetsWindow>("HotAssetsWindow");
 
-            //开始解压游戏内嵌资源
-            //IDecompressAssets decompress = await MJAssetsABFrame.StartDeCompressBuiltinFile(bundleModuleEnum);
             IDecompressAssets decompress = MJAssetsABFrame.StartDeCompressBuiltinFile(bundleModuleEnum);
             mHotAssetsWindow.ShowDecompressProgress(decompress);
             //等待解压
             await MJAssetsABFrame.WaitDeCompress();
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
-                InstantiateResourcesObj<UpdateTipsWindow>("UpdatetipsWindow").InitView("当前无网络，请检测后重试", () => { NotNetButtonClick(bundleModuleEnum).Forget(); }, () => { NotNetButtonClick(bundleModuleEnum).Forget(); });
+                InstantiateResourcesObj<UpdateTipsWindow>("UpdatetipsWindow").InitView("当前无网络，请检测后重试", async () => {await  NotNetButtonClick(bundleModuleEnum); }, async () => {await NotNetButtonClick(bundleModuleEnum); });
                 return;
             }
             else
@@ -51,7 +49,7 @@ namespace MJ.AssetFrameWork.ABFrame
             //如果当前用户没有网络就弹出弹窗提示
             if (Application.internetReachability != NetworkReachability.NotReachable)
             {
-                CheackAssetsVersion(bundleModuleEnum).Forget();
+               await CheackAssetsVersion(bundleModuleEnum);
             }
             else
             {
@@ -159,7 +157,6 @@ namespace MJ.AssetFrameWork.ABFrame
                 else if (i == 70)
                 {
                     mHotAssetsWindow.progressText.text = "加载AssetBundle配置文件...";
-                    //AssetBundleManager.Instance.LoadAssetBundelConfig(BundleModuleEnum.Hall);
                 }
                 else if (i == 90)
                 {
