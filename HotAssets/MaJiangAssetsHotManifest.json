@@ -1,0 +1,71 @@
+{
+  "updateNotice": "窗口加载测试",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/MaJiang/1/StandaloneWindows",
+  "hotAssetsPatcheList": [
+    {
+      "patchVersion": 1,
+      "hotAssetsList": [
+        {
+          "abName": "hallbundleconfig.ab",
+          "md5": "807B447501AF92776A67A498AF685628",
+          "size": 3.16210938
+        },
+        {
+          "abName": "majiangbundleconfig.ab",
+          "md5": "54A26BAAD6082069837C36065EFF137D",
+          "size": 3.01269531
+        },
+        {
+          "abName": "majiang_hall.ab",
+          "md5": "2BC2EF09E61AFAF5E8A51EF9F07B87F3",
+          "size": 1571.83789
+        },
+        {
+          "abName": "majiang_loading.ab",
+          "md5": "DA7B70722DADA9F5DEFC3E9C6FDEF1CA",
+          "size": 503.547852
+        },
+        {
+          "abName": "majiang_login.ab",
+          "md5": "9FD358A139E5C2B8894257BFD93C9078",
+          "size": 721.5332
+        },
+        {
+          "abName": "majiang_majiangwindow.ab",
+          "md5": "4E22C6F897907FF7AC7E02D90EEC1CAE",
+          "size": 7.41894531
+        },
+        {
+          "abName": "majiang_shop.ab",
+          "md5": "80BE358AD385A916AE0165BFA30F3FAD",
+          "size": 225.6875
+        },
+        {
+          "abName": "niuniubundleconfig.ab",
+          "md5": "6D76A79E9595F32D76EE3A7D768F3A47",
+          "size": 3.3828125
+        },
+        {
+          "abName": "shisanshuibundleconfig.ab",
+          "md5": "A1652843F1744855AE7B5C1EA19E4EA0",
+          "size": 3.32617188
+        },
+        {
+          "abName": "shuangkoubundleconfig.ab",
+          "md5": "8D12D1C5A4C2A285E134FA57AE1C7BEF",
+          "size": 3.399414
+        },
+        {
+          "abName": "wuzhangbundleconfig.ab",
+          "md5": "F05026AB9CC0FDFDBAEA68DFCD04F871",
+          "size": 3.18554688
+        },
+        {
+          "abName": "zhizunbundleconfig.ab",
+          "md5": "AC36A935309D996BE75BC35A8AAA99DB",
+          "size": 3.47363281
+        }
+      ]
+    }
+  ]
+}

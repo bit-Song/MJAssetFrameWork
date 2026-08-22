@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
@@ -68,12 +69,12 @@ namespace MJ.AssetFrameWork.ABFrame
                         Debug.Log("StartDownLoad ModuleEnum:" + mCurHotAssetsMoudle.CurBundleModuleEnum + "AssetBudnle Url:" + mDownLoadUrl);
                         HttpWebRequest request = WebRequest.Create(mDownLoadUrl) as HttpWebRequest;
                         request.Method = "Get";
-
+                        
                         using (HttpWebResponse response = request.GetResponse() as HttpWebResponse)
                         using (var stream = response.GetResponseStream())
                         using (var fileStream = File.Create(mFileSavePath))
                         {
-                            byte[] buffer = new byte[512];
+                            byte[] buffer = new byte[1024];
                             int size = stream.Read(buffer, 0, buffer.Length);
 
                             while (size > 0)
@@ -82,6 +83,7 @@ namespace MJ.AssetFrameWork.ABFrame
                                 size = stream.Read(buffer, 0, buffer.Length);
                                 downLoadSizeKb += size;
                                 downloadedSize += size;
+                                //await UniTask.Delay(10);
                             }
                             success = true;
                             Debug.Log("DownLoadSuccess MoudleEnmu:" + mCurHotAssetsMoudle.CurBundleModuleEnum + "AssetBundleUrl:" + mDownLoadUrl + " FileSavePath:" + mFileSavePath);
@@ -98,7 +100,7 @@ namespace MJ.AssetFrameWork.ABFrame
                     mCurHotAssetsMoudle.mAssetDownLoadSizeM += downloadedSize / 1024f / 1024f;
                     return true;   // 成功
                 }
-                Debug.LogError("文件下载失败，正在重新下载，当前尝试下载次数：" + mDurDownLoadCount);
+                Debug.LogError("文件下载失败，正在重新下载，当前尝试下载次数：" + mDurDownLoadCount + "\r\nURL:" + mDownLoadUrl);
             }
             return false;  // 全部失败
         }

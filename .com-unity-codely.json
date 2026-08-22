@@ -1,10 +1,10 @@
 {
-  "unity_port": 61256,
-  "stream_port": 50202,
+  "unity_port": 65301,
+  "stream_port": 56466,
   "created_date": "2026-08-09T11:29:47.854Z",
   "project_path": "E:/Unity/TuanJieProject/Framework/Git/MJAssetFrameWork/Unity/MJAssetFrameWork/Assets",
   "reloading": false,
   "reason": "ready",
-  "seq": 36748,
-  "last_heartbeat": "2026-08-20T09:50:43.287Z"
+  "seq": 2606,
+  "last_heartbeat": "2026-08-22T03:43:01.214Z"
 }

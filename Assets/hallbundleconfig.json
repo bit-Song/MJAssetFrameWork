@@ -401,6 +401,55 @@
       "bundleDependce": [
         "hall_hall.ab"
       ]
+    },
+    {
+      "path": "Assets/hallbundleconfig.json",
+      "crc": 2278162772,
+      "bundleName": "hallbundleconfig.ab",
+      "assetName": "hallbundleconfig.json",
+      "bundleDependce": []
+    },
+    {
+      "path": "Assets/majiangbundleconfig.json",
+      "crc": 2477602810,
+      "bundleName": "majiangbundleconfig.ab",
+      "assetName": "majiangbundleconfig.json",
+      "bundleDependce": []
+    },
+    {
+      "path": "Assets/niuniubundleconfig.json",
+      "crc": 22549807,
+      "bundleName": "niuniubundleconfig.ab",
+      "assetName": "niuniubundleconfig.json",
+      "bundleDependce": []
+    },
+    {
+      "path": "Assets/shisanshuibundleconfig.json",
+      "crc": 3747798839,
+      "bundleName": "shisanshuibundleconfig.ab",
+      "assetName": "shisanshuibundleconfig.json",
+      "bundleDependce": []
+    },
+    {
+      "path": "Assets/shuangkoubundleconfig.json",
+      "crc": 1817674762,
+      "bundleName": "shuangkoubundleconfig.ab",
+      "assetName": "shuangkoubundleconfig.json",
+      "bundleDependce": []
+    },
+    {
+      "path": "Assets/wuzhangbundleconfig.json",
+      "crc": 3505608310,
+      "bundleName": "wuzhangbundleconfig.ab",
+      "assetName": "wuzhangbundleconfig.json",
+      "bundleDependce": []
+    },
+    {
+      "path": "Assets/zhizunbundleconfig.json",
+      "crc": 3848605046,
+      "bundleName": "zhizunbundleconfig.ab",
+      "assetName": "zhizunbundleconfig.json",
+      "bundleDependce": []
     }
   ]
 }

@@ -1,0 +1,71 @@
+{
+  "updateNotice": "窗口加载测试",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/ShiSanShui/1/StandaloneWindows",
+  "hotAssetsPatcheList": [
+    {
+      "patchVersion": 1,
+      "hotAssetsList": [
+        {
+          "abName": "hallbundleconfig.ab",
+          "md5": "807B447501AF92776A67A498AF685628",
+          "size": 3.16210938
+        },
+        {
+          "abName": "majiangbundleconfig.ab",
+          "md5": "54A26BAAD6082069837C36065EFF137D",
+          "size": 3.01269531
+        },
+        {
+          "abName": "niuniubundleconfig.ab",
+          "md5": "6D76A79E9595F32D76EE3A7D768F3A47",
+          "size": 3.3828125
+        },
+        {
+          "abName": "shisanshuibundleconfig.ab",
+          "md5": "A1652843F1744855AE7B5C1EA19E4EA0",
+          "size": 3.32617188
+        },
+        {
+          "abName": "shisanshui_hall.ab",
+          "md5": "37C1AADBB1524FC4A7B8E55C7496B6B3",
+          "size": 2373.97754
+        },
+        {
+          "abName": "shisanshui_loading.ab",
+          "md5": "F5206AF7BF7EB25101A969CA23949701",
+          "size": 1678.49414
+        },
+        {
+          "abName": "shisanshui_login.ab",
+          "md5": "55AF4E34304EA1DF2BBAA8576A77F879",
+          "size": 1112.41211
+        },
+        {
+          "abName": "shisanshui_shisanshuiwindow.ab",
+          "md5": "270E224F0B2FA6BE56C9830BFEA5427C",
+          "size": 192.0957
+        },
+        {
+          "abName": "shisanshui_shop.ab",
+          "md5": "B5DC16E516E9B79FE61A8EB84FCB3669",
+          "size": 391.294922
+        },
+        {
+          "abName": "shuangkoubundleconfig.ab",
+          "md5": "8D12D1C5A4C2A285E134FA57AE1C7BEF",
+          "size": 3.399414
+        },
+        {
+          "abName": "wuzhangbundleconfig.ab",
+          "md5": "F05026AB9CC0FDFDBAEA68DFCD04F871",
+          "size": 3.18554688
+        },
+        {
+          "abName": "zhizunbundleconfig.ab",
+          "md5": "AC36A935309D996BE75BC35A8AAA99DB",
+          "size": 3.47363281
+        }
+      ]
+    }
+  ]
+}

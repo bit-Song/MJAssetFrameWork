@@ -78,12 +78,15 @@ namespace MJ.AssetFrameWork.ABFrame
                     bundleModule = bundleModule,
                     tcs = tcs
                 });
-                await tcs.Task;
-                downLoadingAssetsModuleDic.Add(bundleModule, assetsModule);
+                assetsModule.CurDownloadStateEnum = E_DownloadState.Waiting;
 
+                await tcs.Task;
+
+                assetsModule.CurDownloadStateEnum = E_DownloadState.Downloading;
+
+                downLoadingAssetsModuleDic.Add(bundleModule, assetsModule);
                 if (!downLoadAssetsModuleList.Contains(assetsModule))
                     downLoadAssetsModuleList.Add(assetsModule);
-
                 MultipleThreadBalancing();
                 await assetsModule.StartHotAssets(isCheckVersion);
                 HotModuleAssetsFinish(bundleModule);
@@ -119,7 +122,9 @@ namespace MJ.AssetFrameWork.ABFrame
         public async UniTask<CheckVersionResult> CheckAssetsVersion(BundleModuleEnum bundleModule)
         {
             HotAssetsModule assetsModule = GetOrNewAssetModule(bundleModule);
-            return await assetsModule.CheckAssetsVersion();
+            CheckVersionResult checkVersionResult = await assetsModule.CheckAssetsVersion();
+            
+            return checkVersionResult;
         }
 
         /// <summary>
@@ -164,8 +169,9 @@ namespace MJ.AssetFrameWork.ABFrame
                 //TODO 负载均衡
                 //在没有等待热更的情况下 并且有线程空闲的情况 需要把闲置的线程分配给其他正在热更的模块
                 MultipleThreadBalancing();
-
             }
+            //加载AssetBundle配置文件
+            //AssetBundleManager.Instance.LoadAssetBundelConfig(bundleModule);
         }
 
         /// <summary>

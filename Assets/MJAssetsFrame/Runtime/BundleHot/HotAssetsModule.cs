@@ -8,6 +8,17 @@ using UnityEngine.Networking;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
+    /// <summary>
+    /// 下载状态
+    /// </summary>
+    public enum E_DownloadState
+    {
+        None,        // 未开始
+        Waiting,     // 等待下载（在队列中排队）
+        Downloading, // 正在下载
+        Finished     // 下载完成
+    }
+
     public struct CheckVersionResult
     {
         //是否需要热更
@@ -24,7 +35,10 @@ namespace MJ.AssetFrameWork.ABFrame
         /// 当前下载的资源模块类型
         /// </summary>
         public BundleModuleEnum CurBundleModuleEnum { get; set; }
-
+        /// <summary>
+        /// 当前下载状态
+        /// </summary>
+        public E_DownloadState CurDownloadStateEnum { get; set; } = E_DownloadState.None;
         //需要下载的资源列表
         public List<HotFileInfo> mNeedDownLoadAssetList = new List<HotFileInfo>();
         //所有热更的资源列表
@@ -90,15 +104,18 @@ namespace MJ.AssetFrameWork.ABFrame
 
         public async UniTask StartHotAssets(bool isCheckAssetsVersion = true)
         {
-            mNeedDownLoadAssetList.Clear();
-            mAllHotAssetList.Clear();
-
+            //设置状态为正在下载
+            CurDownloadStateEnum = E_DownloadState.Downloading;
+            //mNeedDownLoadAssetList.Clear();
+            //mAllHotAssetList.Clear();
 
             //创建一个TCS 捕获所有文件下载完成的命令
             var tcs = new UniTaskCompletionSource();
             OnDownLoadAllAssetsFinish += (module) => tcs.TrySetResult();
             if (isCheckAssetsVersion)
             {
+                mNeedDownLoadAssetList.Clear();
+                mAllHotAssetList.Clear();
                 CheckVersionResult result = await CheckAssetsVersion();
                 if (result.isHot)
                 {
@@ -111,7 +128,9 @@ namespace MJ.AssetFrameWork.ABFrame
             }
             else
             {
-                OnDownLoadAllAssetsFinish?.Invoke(CurBundleModuleEnum);
+                //OnDownLoadAllAssetsFinish?.Invoke(CurBundleModuleEnum);
+                //如果不需要检测 就直接开始下载
+                StartDownLoadHotAssets();
             }
             await tcs.Task;
         }
@@ -317,17 +336,26 @@ namespace MJ.AssetFrameWork.ABFrame
             Debug.Log("更新完成abName：" + hotFileInfo.abName);
             HotAssetsManager.DownLoadBundleFinish?.Invoke(hotFileInfo);
         }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="hotFileInfo"></param>
         public void DownLoadAssetBundleFailed(HotFileInfo hotFileInfo)
         {
 
         }
+
+        /// <summary>
+        /// 所有资源下载完成
+        /// </summary>
         public void DownLoadAssetBundleFinish()
         {
             if (File.Exists(mLocalHotAssetManisetPath))
                 File.Delete(mLocalHotAssetManisetPath);
             //将服务端热更清单文件拷贝到本地
             File.Copy(mServerHotAssetsManifestPath, mLocalHotAssetManisetPath);
-
+            //设置为下载完成
+            CurDownloadStateEnum = E_DownloadState.Finished;
             //需要告诉外部全部下载完成
             OnDownLoadAllAssetsFinish?.Invoke(CurBundleModuleEnum);
             //然后置空

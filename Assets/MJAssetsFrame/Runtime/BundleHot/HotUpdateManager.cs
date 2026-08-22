@@ -40,7 +40,8 @@ namespace MJ.AssetFrameWork.ABFrame
             }
             else
             {
-                CheackAssetsVersion(bundleModuleEnum).Forget();
+                Debug.Log("版本检测");
+                await CheackAssetsVersion(bundleModuleEnum);
             }
 
         }
@@ -73,20 +74,24 @@ namespace MJ.AssetFrameWork.ABFrame
                 if (Application.internetReachability == NetworkReachability.ReachableViaCarrierDataNetwork || Application.platform == RuntimePlatform.WindowsEditor || Application.platform == RuntimePlatform.OSXEditor)
                 {
                     UpdateTipsWindow updateTipsWindow = InstantiateResourcesObj<UpdateTipsWindow>("UpdateTipsWindow");
+                    var tcs = new UniTaskCompletionSource();
                     updateTipsWindow.InitView("当前有" + checkVersionResult.sizeM.ToString("F2") + "M资源需要更新，是否更新",
-                        async () =>
-                        {
-                            OnStartHotAssetsCallBack(bundleModuleEnum);
-                            //确认更新
-                            await StartHotAssets(bundleModuleEnum, isCheckVersion);
-                            //完成回调
-                            OnHotFinishCallBack(bundleModuleEnum);
-                        },
-                        () =>
-                        {
-                            //退出游戏
-                            Application.Quit();
-                        });
+                       async () =>
+                       {
+                           Debug.Log("开始资源热更");
+                           OnStartHotAssetsCallBack(bundleModuleEnum);
+                           //确认更新
+                           await StartHotAssets(bundleModuleEnum, isCheckVersion);
+                           //完成回调
+                           OnHotFinishCallBack(bundleModuleEnum);
+                           tcs.TrySetResult();
+                       },
+                       () =>
+                       {
+                           //退出游戏
+                           Application.Quit();
+                       });
+                    await tcs.Task;
                 }
                 else
                 {
@@ -167,7 +172,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 }
                 await UniTask.Yield();
             }
-            GameObject.Destroy(mHotAssetsWindow);
+            GameObject.Destroy(mHotAssetsWindow.gameObject);
         }
         /// <summary>
         /// 加载游戏配置文件

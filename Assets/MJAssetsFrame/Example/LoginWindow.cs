@@ -2,13 +2,21 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class LoginWindow : MonoBehaviour
+namespace MJ.AssetFrameWork.ABFrame
 {
-  
-
-
-    public void OnLOginButtonClick()
+    public class LoginWindow : MonoBehaviour
     {
-        //弹出窗口大厅
+
+
+
+        public void OnLOginButtonClick()
+        {
+            MJAssetsABFrame.Release(gameObject);
+            MJAssetsABFrame.ClearResoucesAssets(true);
+            //弹出窗口大厅
+            MJAssetsABFrame.Instantiate(@"Assets/BundleDemo/Hall/Prefab/HallWindow");
+
+        }
     }
 }
+

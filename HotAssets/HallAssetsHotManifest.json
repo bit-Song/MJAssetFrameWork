@@ -1,14 +1,14 @@
 {
-  "updateNotice": "新增登录窗口",
-  "downLoadUrl": "http://127.0.0.1/HotAssets/Hall/2/StandaloneWindows",
+  "updateNotice": "窗口加载测试",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/Hall/1/StandaloneWindows",
   "hotAssetsPatcheList": [
     {
-      "patchVersion": 2,
+      "patchVersion": 1,
       "hotAssetsList": [
         {
           "abName": "hallbundleconfig.ab",
-          "md5": "6581223B0E11D12D77257997BFA0D6C4",
-          "size": 2.93652344
+          "md5": "807B447501AF92776A67A498AF685628",
+          "size": 3.16210938
         },
         {
           "abName": "hall_examplewindow.ab",
@@ -32,8 +32,8 @@
         },
         {
           "abName": "hall_hallwindow.ab",
-          "md5": "EC40F4F6C4A5128807B3C63F0736F78A",
-          "size": 22.2539063
+          "md5": "CF4029758B45D30310F7DF96AAA54CF0",
+          "size": 22.66211
         },
         {
           "abName": "hall_loading.ab",
@@ -47,8 +47,8 @@
         },
         {
           "abName": "hall_loginwindow.ab",
-          "md5": "E7F827F28ED317C378D31655F5264A47",
-          "size": 13.8769531
+          "md5": "ED04EB0AADDDEB8448C17F4D54E6731F",
+          "size": 13.8984375
         },
         {
           "abName": "hall_shop.ab",
@@ -59,6 +59,36 @@
           "abName": "hall_testobj.ab",
           "md5": "4C0D4AA29ECA3ABDAE40F72E63F7279B",
           "size": 3.63671875
+        },
+        {
+          "abName": "majiangbundleconfig.ab",
+          "md5": "54A26BAAD6082069837C36065EFF137D",
+          "size": 3.01269531
+        },
+        {
+          "abName": "niuniubundleconfig.ab",
+          "md5": "6D76A79E9595F32D76EE3A7D768F3A47",
+          "size": 3.3828125
+        },
+        {
+          "abName": "shisanshuibundleconfig.ab",
+          "md5": "A1652843F1744855AE7B5C1EA19E4EA0",
+          "size": 3.32617188
+        },
+        {
+          "abName": "shuangkoubundleconfig.ab",
+          "md5": "8D12D1C5A4C2A285E134FA57AE1C7BEF",
+          "size": 3.399414
+        },
+        {
+          "abName": "wuzhangbundleconfig.ab",
+          "md5": "F05026AB9CC0FDFDBAEA68DFCD04F871",
+          "size": 3.18554688
+        },
+        {
+          "abName": "zhizunbundleconfig.ab",
+          "md5": "AC36A935309D996BE75BC35A8AAA99DB",
+          "size": 3.47363281
         }
       ]
     }

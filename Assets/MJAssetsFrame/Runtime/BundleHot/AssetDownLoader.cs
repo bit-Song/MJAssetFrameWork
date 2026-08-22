@@ -4,15 +4,6 @@ using UnityEngine;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
-    public class DownLoadEventHandler
-    {
-        public DownLoadEvent downLoadEvent;//回调
-        public HotFileInfo hotFileInfo;
-    }
-
-    //下载事件
-    public delegate void DownLoadEvent(HotFileInfo hotInfo);
-
     public class AssetDownLoader
     {
         //最大下载线程个数
