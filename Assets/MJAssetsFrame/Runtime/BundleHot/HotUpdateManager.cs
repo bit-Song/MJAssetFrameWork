@@ -16,24 +16,19 @@ namespace MJ.AssetFrameWork.ABFrame
         private static HotUpdateManager instance = new HotUpdateManager();
         public static HotUpdateManager Instance => instance;
 
-        private HotAssetsWindow mHotAssetsWindow;
-
         /// <summary>
         /// 热更并且解压模块
         /// </summary>
         /// <param name="bundleModuleEnum"></param>
         public async UniTask HotAndPackAssets(BundleModuleEnum bundleModuleEnum)
         {
-
-            mHotAssetsWindow = InstantiateResourcesObj<HotAssetsWindow>("HotAssetsWindow");
-
             IDecompressAssets decompress = MJAssetsABFrame.StartDeCompressBuiltinFile(bundleModuleEnum);
-            mHotAssetsWindow.ShowDecompressProgress(decompress);
             //等待解压
             await MJAssetsABFrame.WaitDeCompress();
+
+            //检测当前释是否有网络
             if (Application.internetReachability == NetworkReachability.NotReachable)
             {
-                InstantiateResourcesObj<UpdateTipsWindow>("UpdatetipsWindow").InitView("当前无网络，请检测后重试", async () => {await  NotNetButtonClick(bundleModuleEnum); }, async () => {await NotNetButtonClick(bundleModuleEnum); });
                 return;
             }
             else
@@ -49,7 +44,7 @@ namespace MJ.AssetFrameWork.ABFrame
             //如果当前用户没有网络就弹出弹窗提示
             if (Application.internetReachability != NetworkReachability.NotReachable)
             {
-               await CheackAssetsVersion(bundleModuleEnum);
+                await CheackAssetsVersion(bundleModuleEnum);
             }
             else
             {
@@ -71,25 +66,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 //当用户使用流量时，需要询问用户是否需要更新资源
                 if (Application.internetReachability == NetworkReachability.ReachableViaCarrierDataNetwork || Application.platform == RuntimePlatform.WindowsEditor || Application.platform == RuntimePlatform.OSXEditor)
                 {
-                    UpdateTipsWindow updateTipsWindow = InstantiateResourcesObj<UpdateTipsWindow>("UpdateTipsWindow");
-                    var tcs = new UniTaskCompletionSource();
-                    updateTipsWindow.InitView("当前有" + checkVersionResult.sizeM.ToString("F2") + "M资源需要更新，是否更新",
-                       async () =>
-                       {
-                           Debug.Log("开始资源热更");
-                           OnStartHotAssetsCallBack(bundleModuleEnum);
-                           //确认更新
-                           await StartHotAssets(bundleModuleEnum, isCheckVersion);
-                           //完成回调
-                           OnHotFinishCallBack(bundleModuleEnum);
-                           tcs.TrySetResult();
-                       },
-                       () =>
-                       {
-                           //退出游戏
-                           Application.Quit();
-                       });
-                    await tcs.Task;
+
                 }
                 else
                 {
@@ -112,8 +89,7 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <param name="bundleModuleEnum"></param>
         public async UniTask StartHotAssets(BundleModuleEnum bundleModuleEnum, bool isCheckVersion = true)
         {
-            //更新热更进度
-            mHotAssetsWindow.ShowHotAssetsProgress(MJAssetsABFrame.GetHotAssetsModule(bundleModuleEnum));
+
             await MJAssetsABFrame.HotAssets(bundleModuleEnum, isCheckVersion);
         }
 
@@ -144,32 +120,29 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             for (int i = 0; i < 100; i++)
             {
-                mHotAssetsWindow.progressSlider.value = i / 100.0f;
                 if (i == 1)
                 {
-                    mHotAssetsWindow.progressText.text = "加载本地资源...";
                     Debug.Log("加载本地资源");
                 }
                 else if (i == 20)
                 {
-                    mHotAssetsWindow.progressText.text = "加载配置文件...";
+                    Debug.Log("加载配置文件");
                 }
                 else if (i == 70)
                 {
-                    mHotAssetsWindow.progressText.text = "加载AssetBundle配置文件...";
+                    Debug.Log("加载AssetBundle配置文件");
                 }
                 else if (i == 90)
                 {
-                    mHotAssetsWindow.progressText.text = "加载游戏配置文件...";
+                    Debug.Log("加载游戏配置文件");
                     LoadGameConfig();
                 }
                 else if (i == 99)
                 {
-                    mHotAssetsWindow.progressText.text = "加载地图场景...";
+                    Debug.Log("加载地图场景");
                 }
                 await UniTask.Yield();
             }
-            GameObject.Destroy(mHotAssetsWindow.gameObject);
         }
         /// <summary>
         /// 加载游戏配置文件
