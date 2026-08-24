@@ -1,14 +1,14 @@
 {
-  "updateNotice": "窗口加载测试",
-  "downLoadUrl": "http://127.0.0.1/HotAssets/Hall/1/StandaloneWindows",
+  "updateNotice": "输入本次热更描述...",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/Hall/5/StandaloneWindows",
   "hotAssetsPatcheList": [
     {
-      "patchVersion": 1,
+      "patchVersion": 5,
       "hotAssetsList": [
         {
           "abName": "hallbundleconfig.ab",
-          "md5": "807B447501AF92776A67A498AF685628",
-          "size": 3.16210938
+          "md5": "046F828A54B01CB7FBD735981A31F5A8",
+          "size": 3.30273438
         },
         {
           "abName": "hall_examplewindow.ab",
@@ -17,13 +17,13 @@
         },
         {
           "abName": "hall_exshopitem.ab",
-          "md5": "A611EF0C032650E25A775137436A1268",
-          "size": 4.165039
+          "md5": "F16493D65F261F946D93EBF210A98FA4",
+          "size": 4.446289
         },
         {
           "abName": "hall_exshopwindow.ab",
-          "md5": "F9DF5114E8DF37C0194C30DCEE48B3DE",
-          "size": 13.3818359
+          "md5": "119F1AC1C3C74B5C1FDD1A0282A30E3D",
+          "size": 13.6259766
         },
         {
           "abName": "hall_hall.ab",
@@ -32,18 +32,18 @@
         },
         {
           "abName": "hall_hallwindow.ab",
-          "md5": "CF4029758B45D30310F7DF96AAA54CF0",
-          "size": 22.66211
+          "md5": "24B607D9BEBB599DDB5CEBC8A7F50AEC",
+          "size": 22.75586
         },
         {
           "abName": "hall_loading.ab",
-          "md5": "AC0E13BFB0CC067195820E4655D7BEF5",
-          "size": 326.123047
+          "md5": "8EFEE6A238E12E476DA496CBC376E404",
+          "size": 643.568359
         },
         {
           "abName": "hall_login.ab",
-          "md5": "8D1BAC9AE1773DF54048B62D6C1C57ED",
-          "size": 281.703125
+          "md5": "9FD9537C4F2B91E8D9DE5FD9B99676DA",
+          "size": 284.292969
         },
         {
           "abName": "hall_loginwindow.ab",
@@ -52,43 +52,13 @@
         },
         {
           "abName": "hall_shop.ab",
-          "md5": "2674BA6CA5D4ABA2B86584076BB5D50A",
-          "size": 234.564453
+          "md5": "B0BA4CF6432F61D3EC28B0097ECBE367",
+          "size": 460.463867
         },
         {
           "abName": "hall_testobj.ab",
           "md5": "4C0D4AA29ECA3ABDAE40F72E63F7279B",
           "size": 3.63671875
-        },
-        {
-          "abName": "majiangbundleconfig.ab",
-          "md5": "54A26BAAD6082069837C36065EFF137D",
-          "size": 3.01269531
-        },
-        {
-          "abName": "niuniubundleconfig.ab",
-          "md5": "6D76A79E9595F32D76EE3A7D768F3A47",
-          "size": 3.3828125
-        },
-        {
-          "abName": "shisanshuibundleconfig.ab",
-          "md5": "A1652843F1744855AE7B5C1EA19E4EA0",
-          "size": 3.32617188
-        },
-        {
-          "abName": "shuangkoubundleconfig.ab",
-          "md5": "8D12D1C5A4C2A285E134FA57AE1C7BEF",
-          "size": 3.399414
-        },
-        {
-          "abName": "wuzhangbundleconfig.ab",
-          "md5": "F05026AB9CC0FDFDBAEA68DFCD04F871",
-          "size": 3.18554688
-        },
-        {
-          "abName": "zhizunbundleconfig.ab",
-          "md5": "AC36A935309D996BE75BC35A8AAA99DB",
-          "size": 3.47363281
         }
       ]
     }

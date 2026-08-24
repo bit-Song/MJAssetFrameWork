@@ -48,9 +48,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             //如果不需要热更直接执行热更完成回调即可
             if (BundleSettings.Instance.bundleHotType == E_BundleHotEnum.NoHot)
-            {
                 return;
-            }
 
             HotAssetsModule assetsModule = GetOrNewAssetModule(bundleModule);
 
@@ -73,7 +71,7 @@ namespace MJ.AssetFrameWork.ABFrame
             }
             else
             {
-                
+
                 // 循环等待，直到真正有空位
                 while (downLoadingAssetsModuleDic.Count >= MAX_THREAD_COUNT)
                 {
@@ -128,7 +126,11 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             HotAssetsModule assetsModule = GetOrNewAssetModule(bundleModule);
             CheckVersionResult checkVersionResult = await assetsModule.CheckAssetsVersion();
+            if (!checkVersionResult.isHot)
+            {
+                AssetBundleManager.Instance.LoadAssetBundelConfig(bundleModule);
 
+            }
             return checkVersionResult;
         }
 
@@ -176,7 +178,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 MultipleThreadBalancing();
             }
             //加载AssetBundle配置文件
-            //AssetBundleManager.Instance.LoadAssetBundelConfig(bundleModule);
+            AssetBundleManager.Instance.LoadAssetBundelConfig(bundleModule);
         }
 
         /// <summary>

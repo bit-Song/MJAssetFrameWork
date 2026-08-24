@@ -1,27 +1,6 @@
 {
   "bundleInfoList": [
     {
-      "path": "Assets/hallbundleconfig.json",
-      "crc": 2278162772,
-      "bundleName": "hallbundleconfig.ab",
-      "assetName": "hallbundleconfig.json",
-      "bundleDependce": []
-    },
-    {
-      "path": "Assets/majiangbundleconfig.json",
-      "crc": 2477602810,
-      "bundleName": "majiangbundleconfig.ab",
-      "assetName": "majiangbundleconfig.json",
-      "bundleDependce": []
-    },
-    {
-      "path": "Assets/niuniubundleconfig.json",
-      "crc": 22549807,
-      "bundleName": "niuniubundleconfig.ab",
-      "assetName": "niuniubundleconfig.json",
-      "bundleDependce": []
-    },
-    {
       "path": "Assets/BundleDemo/ShiSanShui/Textures/Hall/5zhang.png",
       "crc": 2152443134,
       "bundleName": "shisanshui_hall.ab",
@@ -432,9 +411,7 @@
       "crc": 3440464964,
       "bundleName": "shisanshui_shisanshuiwindow.ab",
       "assetName": "ShiSanShuiWindow.prefab",
-      "bundleDependce": [
-        "shisanshui_shisanshuiwindow.ab"
-      ]
+      "bundleDependce": []
     },
     {
       "path": "Assets/BundleDemo/ShiSanShui/Textures/Shop/图层 6.png",
@@ -497,34 +474,6 @@
       "crc": 3443066788,
       "bundleName": "shisanshui_shop.ab",
       "assetName": "选中 银行存款.png",
-      "bundleDependce": []
-    },
-    {
-      "path": "Assets/shisanshuibundleconfig.json",
-      "crc": 3747798839,
-      "bundleName": "shisanshuibundleconfig.ab",
-      "assetName": "shisanshuibundleconfig.json",
-      "bundleDependce": []
-    },
-    {
-      "path": "Assets/shuangkoubundleconfig.json",
-      "crc": 1817674762,
-      "bundleName": "shuangkoubundleconfig.ab",
-      "assetName": "shuangkoubundleconfig.json",
-      "bundleDependce": []
-    },
-    {
-      "path": "Assets/wuzhangbundleconfig.json",
-      "crc": 3505608310,
-      "bundleName": "wuzhangbundleconfig.ab",
-      "assetName": "wuzhangbundleconfig.json",
-      "bundleDependce": []
-    },
-    {
-      "path": "Assets/zhizunbundleconfig.json",
-      "crc": 3848605046,
-      "bundleName": "zhizunbundleconfig.ab",
-      "assetName": "zhizunbundleconfig.json",
       "bundleDependce": []
     }
   ]

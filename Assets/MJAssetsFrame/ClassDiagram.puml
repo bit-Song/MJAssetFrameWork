@@ -1,0 +1,571 @@
+@startuml MJAssetsFrameWork Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 50
+
+' ========== Config Layer ==========
+package "Config" {
+    class BundleSettings <<ScriptableObject>> {
+        +AssetDownLoadUrl: string
+        +bundleHotType: E_BundleHotEnum
+        +loadAssetType: E_LoadAssetEnum
+        +MAX_THREAD_COUNT: int
+        +bundleEnctypt: BundleEncryptToggle
+        +buildTarget: BuildTarget
+        +buildAssetBundleOptions: BuildAssetBundleOptions
+        +BundlePostfix: string
+        +GetAssetsDeCompressPath(module): string
+        +GetAssetsBuiltinBundlePath(module): string
+        +GetHotAssetsPath(module): string
+    }
+
+    class BundleConfig {
+        +bundleInfoList: List<BundleInfo>
+    }
+
+    class BundleInfo {
+        +path: string
+        +crc: uint
+        +bundleName: string
+        +assetName: string
+        +bundleDependce: List<string>
+    }
+
+    class BundleModuleData {
+        +bundleid: long
+        +moduleName: string
+        +isBuild: bool
+        +prefabPathArr: List<string>
+        +rootFolderPathArr: List<string>
+        +signFolderPathArr: List<BundleFileInfo>
+    }
+
+    class BundleModuleEnum <<enum>> {
+        None
+        Hall
+        MaJiang
+        NiuNiu
+        ShiSanShui
+        ShuangKou
+        WuZhang
+        ZhiZun
+    }
+
+    class BuiltinBundleInfo {
+        +fileName: string
+        +md5: string
+        +size: float
+    }
+
+    class BundleFileInfo {
+        +abName: string
+        +bundlePath: string
+    }
+
+    class BundleEncryptToggle {
+        +isEncrypt: bool
+        +encryptKey: string
+    }
+
+    enum E_BundleHotEnum {
+        NoHot
+        Hot
+    }
+
+    enum E_LoadAssetEnum {
+        Editor
+        AssetBundle
+    }
+
+    enum E_DownloadState {
+        None
+        Waiting
+        Downloading
+        Finished
+    }
+}
+
+' ========== Interfaces ==========
+package "Interfaces" {
+    interface IHotAssets {
+        +HotAssets(module, isCheckVersion): UniTask
+        +CheckAssetsVersion(module): UniTask<CheckVersionResult>
+        +GetHotAssetsModule(module): HotAssetsModule
+        +OnMainThreadUpdate()
+    }
+
+    interface IResourcesInterface {
+        +Initlizate()
+        +PreLoadObj(path, count)
+        +Instantiate(path): GameObject
+        +InstantiateAsync(path): UniTask<GameObject>
+        +InstantiateAndLoadAsync(path): UniTask<GameObject>
+        +LoadResource<T>(path): T
+        +LoadResourceAsync<T>(path): UniTask<T>
+        +Release(obj, destroy)
+        +ClearResoucesAssets(absoluteCleaning)
+    }
+
+    abstract class IDecompressAssets {
+        +TotalSizem: float
+        +AlreadyDecompressSizem: float
+        +IsStartDecompress: bool
+        {abstract} +StartDeCompressBuiltinFile(module): IDecompressAssets
+        {abstract} +WaitDecompress(): UniTask
+        {abstract} +GetDeCompressProgress(): float
+    }
+}
+
+' ========== Framework Core ==========
+package "Framework Core" {
+    class MJABFrameBase <<MonoBehaviour>> {
+        #instance: MJAssetsABFrame
+        +Instance: MJAssetsABFrame
+        #OnInitlizate()
+    }
+
+    class MJAssetsABFrame <<partial>> {
+        -mHotAssets: IHotAssets
+        -mResources: IResourcesInterface
+        -mDecompressAssets: IDecompressAssets
+        +RecyclObjRoot: Transform
+        +InitFrameWork()
+        +Update()
+    }
+
+    class MJAssetsABFrames <<partial>> {
+        +HotAssets(module, isCheckVersion)
+        +CheckAssetsVersion(module): UniTask<CheckVersionResult>
+        +GetHotAssetsModule(module): HotAssetsModule
+        +StartDeCompressBuiltinFile(module): IDecompressAssets
+        +GetDeCompressProgress(): float
+        +WaitDeCompress(): UniTask
+        +PreLoadObj(path, count)
+        +Instantiate(path): GameObject
+        +InstantiateAsync(path): UniTask<GameObject>
+        +InstantiateAndLoadAsync(path): UniTask<GameObject>
+        +LoadResource<T>(path): T
+        +LoadResourceAsync<T>(path): UniTask<T>
+        +LoadSprite(path): Sprite
+        +LoadTexture(path): Texture
+        +LoadAudio(path): AudioClip
+        +LoadTextAsset(path): TextAsset
+        +LoadAtlasSprite(atlasPath, spriteName): Sprite
+        +Release(obj, destroy)
+        +ClearResoucesAssets(absoluteCleaning)
+    }
+}
+
+' ========== BundleHot Layer ==========
+package "Runtime/BundleHot" {
+    class HotAssetsManager {
+        -MAX_THREAD_COUNT: int
+        -allAssetsModuleDic: Dictionary<BundleModuleEnum, HotAssetsModule>
+        -downLoadingAssetsModuleDic: Dictionary<BundleModuleEnum, HotAssetsModule>
+        -downLoadAssetsModuleList: List<HotAssetsModule>
+        -waitDownLoadModuleQueue: Queue<WaitDownLoadModule>
+        +DownLoadBundleFinish: Action<HotFileInfo>
+        +HotAssets(module, isCheckVersion): UniTask
+        +CheckAssetsVersion(module): UniTask<CheckVersionResult>
+        +GetHotAssetsModule(module): HotAssetsModule
+        +HotModuleAssetsFinish(module)
+        +MultipleThreadBalancing()
+        +OnMainThreadUpdate()
+    }
+
+    class HotAssetsModule {
+        +CurBundleModuleEnum: BundleModuleEnum
+        +CurDownloadStateEnum: E_DownloadState
+        +mNeedDownLoadAssetList: List<HotFileInfo>
+        +mAllHotAssetList: List<HotFileInfo>
+        +HotAssetCount: int
+        +UpdateNoticeContent: string
+        +mAssetsMaxSizeM: float
+        +mAssetDownLoadSizeM: float
+        +HotAssetsSavePath: string
+        +StartHotAssets(isCheckVersion): UniTask
+        +StartDownLoadHotAssets()
+        +CheckAssetsVersion(): UniTask<CheckVersionResult>
+        +DownLoadHotAssetsManifest(): UniTask
+        +ComputeNeedHotAssetsList(patch): bool
+        +CheckModuleAssetsIsHot(): bool
+        +SetDownLoadThreadCount(threadCount)
+        +HotAssetsIsExists(bundleName): bool
+        +DownLoadAssetBundleSuccess(info)
+        +DownLoadAssetBundleFailed(info)
+        +DownLoadAssetBundleFinish()
+    }
+
+    class AssetDownLoader {
+        +MAX_THREAD_COUNT: int
+        +assetsDownLoadUrl: string
+        +hotAssetsSvaePath: string
+        +curHotAssetsModule: HotAssetsModule
+        -downLoadQueue: Queue<HotFileInfo>
+        -mAllDownLoadThreadList: List<DownLoadThread>
+        -mIsFinished: bool
+        +StartThreadDownLoadQueue()
+        +DownLoadNextBundle()
+        +RemoveDownLoadThread(thread)
+    }
+
+    class DownLoadThread {
+        -mCurHotAssetsMoudle: HotAssetsModule
+        -mHotFileInfo: HotFileInfo
+        -mDownLoadUrl: string
+        -mFileSavePath: string
+        -downLoadSizeKb: float
+        -mDurDownLoadCount: int
+        +StartDownLoad(): UniTask<bool>
+    }
+
+    class HotUpdateManager {
+        -instance: HotUpdateManager
+        -mHotAssetsWindow: HotAssetsWindow
+        +HotAndPackAssets(module): UniTask
+        +CheackAssetsVersion(module, isCheckVersion): UniTask
+        +StartHotAssets(module, isCheckVersion): UniTask
+        +OnHotFinishCallBack(module)
+        +InitGameEnv(): UniTask
+    }
+
+    class AssetsDecompressManager {
+        -mStreamingAssetsBudlePath: string
+        -mDecompressPath: string
+        -mNeedDecompressAssetsFileList: List<string>
+        -mDecompressTask: UniTask
+        +StartDeCompressBuiltinFile(module): IDecompressAssets
+        +WaitDecompress(): UniTask
+        +GetDeCompressProgress(): float
+        -ComputeDeCompressFile(module): bool
+        -UnPackToPresistentDataPath(module): UniTask
+    }
+
+    class HotAssetsManifest {
+        +updateNotice: string
+        +downLoadUrl: string
+        +hotAssetsPatcheList: List<HotAssetsPatch>
+    }
+
+    class HotAssetsPatch {
+        +patchVersion: int
+        +hotAssetsList: List<HotFileInfo>
+    }
+
+    class HotFileInfo {
+        +abName: string
+        +md5: string
+        +size: float
+    }
+
+    struct CheckVersionResult {
+        +isHot: bool
+        +sizeM: float
+    }
+
+    class WaitDownLoadModule {
+        +bundleModule: BundleModuleEnum
+        +tcs: UniTaskCompletionSource
+    }
+}
+
+' ========== BundleLoad Layer ==========
+package "Runtime/BundleLoad" {
+    class AssetBundleManager {
+        -instance: AssetBundleManager
+        -mAllBundleAssetDic: Dictionary<uint, BundleItem>
+        -mAllAlreadAssetBundleDic: Dictionary<string, AssetBundleCache>
+        -mAssetBundleCachePool: ClassObjectPool<AssetBundleCache>
+        +LoadAssetBundelConfig(module)
+        +LoadAssetBundle(crc): BundleItem
+        +LoadAssetBundle(bundleName, module): AssetBundle
+        +ReleaseAssets(assetItem, unLoad)
+        +GetBundleItemByAbName(bundleName): List<BundleItem>
+    }
+
+    class ResourcesManager {
+        -mAlreayLoadAssetsDic: Dictionary<uint, BundleItem>
+        -mObjectPoolDic: Dictionary<uint, List<CacheObject>>
+        -mAllObjectDic: Dictionary<int, CacheObject>
+        -mCacheObjectPool: ClassObjectPool<CacheObject>
+        -mAsyncLoadingTaskList: List<long>
+        -mWaitDownloadTcs: Dictionary<uint, UniTaskCompletionSource>
+        +Initlizate()
+        +Instantiate(path): GameObject
+        +InstantiateAsync(path): UniTask<GameObject>
+        +InstantiateAndLoadAsync(path): UniTask<GameObject>
+        +LoadResource<T>(path): T
+        +LoadResourceAsync<T>(path): UniTask<T>
+        +Release(obj, destroy)
+        +ClearResoucesAssets(absoluteCleaning)
+        +PreLoadObj(path, count)
+        +PreLoadResource<T>(path)
+    }
+
+    class BundleItem {
+        +path: string
+        +crc: uint
+        +bundleName: string
+        +assetName: string
+        +bundleModuleType: BundleModuleEnum
+        +bundleDependce: List<string>
+        +assetBundle: AssetBundle
+        +obj: UnityEngine.Object
+    }
+
+    class AssetBundleCache {
+        +assetBundle: AssetBundle
+        +refereaceCount: int
+        +Release(unLoad)
+    }
+
+    class CacheObject {
+        +crc: uint
+        +path: string
+        +insid: int
+        +obj: GameObject
+        +Release()
+    }
+}
+
+' ========== Help Layer ==========
+package "Runtime/Help" {
+    class ClassObjectPool<T> {
+        -mPool: Stack<T>
+        -mMaxCount: int
+        +Spawn(): T
+        +Recycl(obj)
+    }
+
+    class Crc32 {
+        +GetCrc32(msg): uint
+        +GetCrc32(bytes): uint
+    }
+
+    class FileHelper {
+        +DeleteFolder(folderPath)
+        +WriteFile(filePath, data)
+    }
+}
+
+' ========== Editor Layer ==========
+package "Editor" {
+    class BuildWindow <<EditorWindow>> {
+        +bundleBehaviour: BundleBehaviour
+        +buildBundleWindow: BuildBundleWindow
+        +hotBundleWindow: BuildHotPatchWindow
+        +ShowAssetBundleWindow()
+    }
+
+    class BundleBehaviour {
+        +moduleDataList: List<BundleModuleData>
+        +rowModuleDataList: List<List<BundleModuleData>>
+        +CurPlatfam: string
+        +Initzation()
+        +OGUI()
+        +DrawBuildButtons()
+        +BuildBundle()
+        +DrawAddModuleButton()
+    }
+
+    class BuildBundleWindow {
+        +Initzation()
+        +DrawBuildButtons()
+        +BuildBundle()
+        +CopyBundleToStreamingAssetsPath()
+    }
+
+    class BuildHotPatchWindow {
+        +patchDes: string
+        +hotVersion: string
+        +Initzation()
+        +DrawBuildButtons()
+        +BuildBundle()
+        +CopyBundleToStreamingAssetsPath()
+    }
+
+    class LeftMenuWinow <<TreeView>> {
+        +buildWindow: BuildWindow
+        +CurrentSelected: E_MenuSelected
+        +BuildRoot(): TreeViewItem
+        +SelectionChanged(selectedIds)
+    }
+
+    class BundleModuleConfig <<EditorWindow>> {
+        -moduleName: string
+        -preArrayWindow: ArrayWindow
+        -rootFolderWindo: ArrayWindow
+        -signBundleWindow: SignArrayWindow
+        +ShowWindow(moduleName)
+        +SaveConfiguration()
+        +DeleteConfiguration()
+    }
+
+    class BuildBundleConfigura <<ScriptableObject>> {
+        +AssetBundleConfig: List<BundleModuleData>
+        +GetBundleDataByName(moduleName): BundleModuleData
+        +RemoveModuleByName(moduleName)
+        +SaveModuleData(moduleData)
+    }
+
+    class BuildBundleCompiler {
+        -allBundlePatchList: List<string>
+        -allFolderBundleDic: Dictionary
+        -allPrefabsBundleDic: Dictionary
+        +BuildAssetBundle(data, buildType, version, notice)
+        +CopyBundleToStramingAssets(data)
+        +GeneratorHotAssets()
+        +GeneralHotAssetsManifest()
+        +EncryptAllBundle()
+        +WriteAssetBundleConfig()
+    }
+
+    class BundleTools {
+        +GenerateBundleModuleEnum()
+    }
+
+    class ArrayWindow {
+        +pathList: List<string>
+        +title: string
+        +Init(title)
+        +GetWindow()
+    }
+
+    class SignArrayWindow {
+        +fileInfoList: List<BundleFileInfo>
+        +title: string
+        +Init(title)
+        +GetWindow()
+    }
+
+    enum E_BuildType {
+        AssetBundle
+        HotPatch
+    }
+
+    enum E_MenuSelected {
+        Root
+        Build
+        AssetBundle
+        HotPatch
+        BundleSetting
+    }
+}
+
+' ========== Example/Demo ==========
+package "Example/Demo" {
+    class Test <<MonoBehaviour>> {
+        +Awake()
+        +Start()
+        +StartGame()
+    }
+
+    class HotAssetsWindow <<MonoBehaviour>> {
+        +progressSlider: Slider
+        +progressText: Text
+        +rateText: Text
+        +updateNoticeObj: GameObject
+        +updateNoticeText: Text
+        +ShowDecompressProgress(decompress)
+        +ShowHotAssetsProgress(assetsModule)
+    }
+
+    class UpdateTipsWindow <<MonoBehaviour>> {
+        +contentText: Text
+        +InitView(content, updateCallback, quitCallback)
+        +OnUpdateButtonClick()
+        +OnQuitButtonClick()
+    }
+
+    class LoginWindow <<MonoBehaviour>> {
+        +OnLOginButtonClick()
+    }
+
+    class GameModeItem <<MonoBehaviour>> {
+        +button: Button
+        +gameType: BundleModuleEnum
+        +OnClick()
+        +OnGameButtonClick(): UniTask
+    }
+
+    class ButtonClick <<MonoBehaviour>> {
+        +OnButtonClick()
+    }
+}
+
+' ========== Relationships ==========
+
+' Framework Core
+MJAssetsABFrame --|> MJABFrameBase
+MJAssetsABFrames ..> MJAssetsABFrame : partial class
+
+' MJAssetsABFrame holds interfaces
+MJAssetsABFrame *-- IHotAssets : mHotAssets
+MJAssetsABFrame *-- IResourcesInterface : mResources
+MJAssetsABFrame *-- IDecompressAssets : mDecompressAssets
+
+' Interface implementations
+HotAssetsManager ..|> IHotAssets
+ResourcesManager ..|> IResourcesInterface
+AssetsDecompressManager --|> IDecompressAssets
+
+' BundleHot relationships
+HotAssetsManager *-- HotAssetsModule : manages
+HotAssetsModule *-- AssetDownLoader : creates
+AssetDownLoader *-- DownLoadThread : manages
+HotAssetsModule *-- HotAssetsManifest : downloads
+HotAssetsManifest *-- HotAssetsPatch : contains
+HotAssetsPatch *-- HotFileInfo : contains
+HotAssetsManager *-- WaitDownLoadModule : queues
+HotAssetsModule --> CheckVersionResult : returns
+
+' HotUpdateManager orchestrates
+HotUpdateManager --> MJAssetsABFrame : calls API
+HotUpdateManager --> HotAssetsWindow : controls UI
+HotUpdateManager --> AssetBundleManager : loads config after hot update
+
+' BundleLoad relationships
+ResourcesManager --> AssetBundleManager : loads AB
+AssetBundleManager *-- BundleItem : manages
+AssetBundleManager *-- AssetBundleCache : caches
+AssetBundleManager --> ClassObjectPool : uses pool
+ResourcesManager *-- CacheObject : pools
+ResourcesManager --> ClassObjectPool : uses pool
+
+' Config relationships
+BundleConfig *-- BundleInfo : contains
+BundleSettings *-- BundleEncryptToggle
+BundleModuleData *-- BundleFileInfo : contains
+
+' Editor relationships
+BuildWindow *-- BuildBundleWindow
+BuildWindow *-- BuildHotPatchWindow
+BuildWindow *-- LeftMenuWinow
+BuildBundleWindow --|> BundleBehaviour
+BuildHotPatchWindow --|> BundleBehaviour
+BundleModuleConfig *-- ArrayWindow
+BundleModuleConfig *-- SignArrayWindow
+BuildBundleConfigura *-- BundleModuleData : contains
+BuildBundleCompiler --> BundleConfig : generates
+BuildBundleCompiler --> HotAssetsManifest : generates
+BuildBundleCompiler --> BuiltinBundleInfo : generates
+BuildBundleCompiler --> BundleSettings : reads config
+BundleTools --> BundleModuleEnum : generates
+
+' Demo relationships
+Test --> MJAssetsABFrame : initializes
+Test --> HotUpdateManager : starts flow
+GameModeItem --> MJAssetsABFrame : calls API
+GameModeItem --> HotAssetsModule : reads progress
+LoginWindow --> MJAssetsABFrame : calls API
+ButtonClick --> MJAssetsABFrame : calls API
+
+' Data flow
+HotAssetsModule --> BundleSettings : reads config
+AssetBundleManager --> BundleSettings : reads config
+ResourcesManager --> BundleSettings : reads config
+DownLoadThread --> HotAssetsModule : reports progress
+
+@enduml

@@ -2,16 +2,21 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-public class ButtonClick : MonoBehaviour
+namespace MJ.AssetFrameWork.ABFrame
 {
-    // Start is called before the first frame update
-    void Start()
+    public class ButtonClick : MonoBehaviour
     {
-        GetComponent<Button>().onClick.AddListener(OnButtonClick);
-    }
+        void Start()
+        {
+            GetComponent<Button>().onClick.AddListener(OnButtonClick);
+        }
 
-    void OnButtonClick()
-    {
-       
+        void OnButtonClick()
+        {
+            //MJAssetsABFrame.Release(transform.parent.gameObject, true);
+            MJAssetsABFrame.ClearResoucesAssets(true);
+            MJAssetsABFrame.Instantiate(@"Assets/BundleDemo/Hall/Prefab/HallWindow");
+        }
     }
 }
+

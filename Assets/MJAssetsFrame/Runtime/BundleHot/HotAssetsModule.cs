@@ -35,10 +35,30 @@ namespace MJ.AssetFrameWork.ABFrame
         /// 当前下载的资源模块类型
         /// </summary>
         public BundleModuleEnum CurBundleModuleEnum { get; set; }
+
+        private E_DownloadState mCurDownloadStateEnum = E_DownloadState.None;
         /// <summary>
         /// 当前下载状态
         /// </summary>
-        public E_DownloadState CurDownloadStateEnum { get; set; } = E_DownloadState.None;
+        public E_DownloadState CurDownloadStateEnum
+        {
+            get
+            {
+                return mCurDownloadStateEnum;
+            }
+
+            set
+            {
+                if (mCurDownloadStateEnum == value) return;
+                mCurDownloadStateEnum = value;
+                OnDownLoadStateChanged?.Invoke(mCurDownloadStateEnum);
+            }
+        }
+        /// <summary>
+        /// 当下载状态改变时触发的回调
+        /// </summary>
+        private event Action<E_DownloadState> OnDownLoadStateChanged;
+
         //需要下载的资源列表
         public List<HotFileInfo> mNeedDownLoadAssetList = new List<HotFileInfo>();
         //所有热更的资源列表
@@ -121,6 +141,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 }
                 else
                 {
+                    //AssetBundleManager.Instance.LoadAssetBundelConfig(CurBundleModuleEnum);
                     OnDownLoadAllAssetsFinish?.Invoke(CurBundleModuleEnum);
                 }
             }
@@ -177,6 +198,7 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <returns></returns>
         public async UniTask<CheckVersionResult> CheckAssetsVersion()
         {
+            //下载资源配置文件
             await DownLoadHotAssetsManifest();
 
             //1.资源清单下载
@@ -253,6 +275,8 @@ namespace MJ.AssetFrameWork.ABFrame
             if (!Directory.Exists(HotAssetsSavePath))
                 Directory.CreateDirectory(HotAssetsSavePath);
             mAssetsMaxSizeM = 0;
+            if (File.Exists(mLocalHotAssetManisetPath))
+                mLocalHotAssetsManifest = JsonConvert.DeserializeObject<HotAssetsManifest>(File.ReadAllText(mLocalHotAssetManisetPath));
             foreach (var item in serverAssetsPath.hotAssetsList)
             {
                 //获取本地AssetBundle文件路径
@@ -260,7 +284,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 mAllHotAssetList.Add(item);
                 //TODO MD5
                 //如果本地文件不存在或者本地文件与服务端不一致 需要热更
-                if (!File.Exists(localFilePath) || item.md5 != MD5.GetMd5FromFile(localFilePath))
+                if (!File.Exists(localFilePath) || item.md5 !=/* MD5.GetMd5FromFile(localFilePath)*/GetLocalFileMd5ByBundleName(item.abName))
                 {
                     mNeedDownLoadAssetList.Add(item);
                     mAssetsMaxSizeM += item.size / 1024f;
@@ -268,6 +292,22 @@ namespace MJ.AssetFrameWork.ABFrame
 
             }
             return mNeedDownLoadAssetList.Count > 0;
+        }
+        public string GetLocalFileMd5ByBundleName(string bundleName)
+        {
+            if (mLocalHotAssetsManifest != null && mLocalHotAssetsManifest.hotAssetsPatcheList.Count > 0)
+            {
+                HotAssetsPatch localPath = mLocalHotAssetsManifest.hotAssetsPatcheList[mLocalHotAssetsManifest.hotAssetsPatcheList.Count - 1];
+
+                foreach (var item in localPath.hotAssetsList)
+                {
+                    if (string.Equals(bundleName, item.abName))
+                    {
+                        return item.md5;
+                    }
+                }
+            }
+            return "";
         }
         /// <summary>
         /// 检测模块资源是否需要热更
@@ -324,7 +364,7 @@ namespace MJ.AssetFrameWork.ABFrame
             if (hotFileInfo.abName.Contains("bundleconfig"))
             {
                 //TODO 下载成功需要及时加载配置文件
-                //
+                AssetBundleManager.Instance.LoadAssetBundelConfig(CurBundleModuleEnum);
 
 
             }
@@ -335,6 +375,8 @@ namespace MJ.AssetFrameWork.ABFrame
             Debug.Log("更新完成abName：" + hotFileInfo.abName);
             HotAssetsManager.DownLoadBundleFinish?.Invoke(hotFileInfo);
         }
+
+
         /// <summary>
         /// 
         /// </summary>
@@ -359,6 +401,8 @@ namespace MJ.AssetFrameWork.ABFrame
             OnDownLoadAllAssetsFinish?.Invoke(CurBundleModuleEnum);
             //然后置空
             OnDownLoadAllAssetsFinish = null;
+            ClearDowanLoadStateChangeCallBack();
+            AssetBundleManager.Instance.LoadAssetBundelConfig(CurBundleModuleEnum);
         }
         #endregion
 
@@ -376,6 +420,23 @@ namespace MJ.AssetFrameWork.ABFrame
             return false;
         }
 
+        /// <summary>
+        /// 增加状态改变后触发的回调函数
+        /// </summary>
+        public void AddDowanLoadStateChangeCallBack(Action<E_DownloadState> downLoadStateChangeAction)
+        {
+            OnDownLoadStateChanged += downLoadStateChangeAction;
+        }
+
+        public void RemoveDowanLoadStateChangeCallBack(Action<E_DownloadState> downLoadStateChangeAction)
+        {
+            OnDownLoadStateChanged -= downLoadStateChangeAction;
+        }
+
+        public void ClearDowanLoadStateChangeCallBack()
+        {
+            OnDownLoadStateChanged = null;
+        }
 
     }
 }

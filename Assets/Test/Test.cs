@@ -23,6 +23,7 @@ public class Test : MonoBehaviour
     public void StartGame()
     {
         MJAssetsABFrame.Instantiate(@"Assets/BundleDemo/Hall/Prefab/LoginWindow");
+        MJAssetsABFrame.HotAssets(BundleModuleEnum.GameItem, true).Forget();
     }
 
 }

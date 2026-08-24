@@ -59,6 +59,8 @@ namespace MJ.AssetFrameWork.ABFrame
         private static AssetBundleManager isntance = new AssetBundleManager();
         public static AssetBundleManager Instance => isntance;
 
+        //已经加载的资源模块
+        private List<BundleModuleEnum> mAlreadyLoadBundleModuleLsit = new List<BundleModuleEnum>();
         //ab包配置文件加载路径
         private string mBundleConfigPath;
         //ab包配置文件名称
@@ -106,11 +108,18 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             try
             {
+                if (mAlreadyLoadBundleModuleLsit.Contains(bundleModule))
+                {
+                    Debug.LogError("改模块资源已经加载过了不需要重复加载：" + bundleModule);
+                    return;
+                }
+
                 //获取当前模块配置文件所在路径
                 if (GeneratorBundleConfigPath(bundleModule))
                 {
+                    //if (File.Exists(mBundleConfigPath))
+                    //    return;
                     AssetBundle bundleConfig = AssetBundle.LoadFromFile(mBundleConfigPath);
-
                     string bundleConfigJson = bundleConfig.LoadAsset<TextAsset>(mAssetBundleConfigName).text;
                     BundleConfig bundleManifeset = JsonConvert.DeserializeObject<BundleConfig>(bundleConfigJson);
 
@@ -130,11 +139,14 @@ namespace MJ.AssetFrameWork.ABFrame
                         }
                         else
                         {
-                            Debug.LogError("AssetBundle Already Exists! BundleName:" + info.bundleName);
+                            //Debug.Log("AssetBundle Already Exists! BundleName:" + info.bundleName);
                         }
                     }
+                    if (mAlreadyLoadBundleModuleLsit.Contains(bundleModule))
+                        mAlreadyLoadBundleModuleLsit.Add(bundleModule);
                     //释放这个assetBundle配置
                     bundleConfig.Unload(false);
+                    Debug.Log("模块配置文件加载完成：" + bundleModule);
                 }
                 else
                 {
@@ -192,12 +204,14 @@ namespace MJ.AssetFrameWork.ABFrame
                     return item;
                 }
                 else
+                {
                     return item;
+                }
             }
             else
             {
                 //不存在说明没该资源没被打包
-                Debug.LogError("Asset not exists AssetBundleConfig !Load Failed:" + crc);
+                Debug.LogError("Asset not exists AssetBundleConfig Load Failed! crc:" + crc);
                 return null;
             }
         }
@@ -263,7 +277,6 @@ namespace MJ.AssetFrameWork.ABFrame
                     foreach (var bundleName in assetItem.bundleDependce)
                     {
                         ReleaseAssetBundle(null, unLoad, bundleName);
-
                     }
                 }
 
@@ -299,14 +312,11 @@ namespace MJ.AssetFrameWork.ABFrame
                     //小于等于0说明资源没有被引用可以直接释放
                     if (bundleCacheItem.refereaceCount <= 0)
                     {
-                        //bundleCacheItem.assetBundle.Unload(unLoad);
                         //从已经加载过的资源对象字典中移除
                         mAllAlreadAssetBundleDic.Remove(assetBundleName);
                         bundleCacheItem.Release(unLoad);
                         //回收对象
                         mAssetBundleCachePool.Recycl(bundleCacheItem);
-                        ////从所有模块的assetbundle的资源对象字典中移除
-                        //mAllBundleAssetDic.Remove(assetItem.crc);
                     }
                 }
                 else
@@ -316,7 +326,7 @@ namespace MJ.AssetFrameWork.ABFrame
             }
             else
             {
-                Debug.LogError("ReleaseAssetBundle Failed,BundleName is Null or bundleCacheItem is Null");
+                Debug.LogError("ReleaseAssetBundle Failed,BundleName is Null or bundleCacheItem is Null!\r\nAssetBundleName：" + assetBundleName);
             }
         }
     }

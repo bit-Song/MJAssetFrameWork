@@ -1,6 +1,6 @@
 /* ----------------------------------------------
 /* Title:AssetBundle模块类
-/* Data:2026/8/20 22:36:30
+/* Data:2026/8/23 14:07:58
 /* Description:  Represents each module which is used to download an load
 /* Modify:
 ----------------------------------------------*/
@@ -16,5 +16,6 @@ namespace MJ.AssetFrameWork.ABFrame
 		ShuangKou,
 		WuZhang,
 		ZhiZun,
+		GameItem,
 	}
 }

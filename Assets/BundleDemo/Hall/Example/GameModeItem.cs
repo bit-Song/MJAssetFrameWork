@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace MJ.AssetFrameWork.ABFrame
+namespace MJ.AssetFrameWork.ABFrame.Example
 {
 
     public class GameModeItem : MonoBehaviour
@@ -31,16 +31,8 @@ namespace MJ.AssetFrameWork.ABFrame
         }
         private void Update()
         {
-            if (mHotModule != null)
+            if (mHotModule != null && mHotModule.CurDownloadStateEnum == E_DownloadState.Downloading)
             {
-                //如果是等待状态
-                if (mHotModule.CurDownloadStateEnum == E_DownloadState.Waiting)
-                {
-                    updateRoot.SetActive(true);
-                    downLoadTips.text = "等待更新中";
-                    return;
-                }
-
                 downLoadProgressText.text = string.Format("{0}m/{1}m",
                     mHotModule.mAssetDownLoadSizeM.ToString("F0"), mHotModule.mAssetsMaxSizeM.ToString("F0"));
 
@@ -53,8 +45,6 @@ namespace MJ.AssetFrameWork.ABFrame
                     lasetDownLoadSize = mHotModule.mAssetDownLoadSizeM;
                     lastTime = Time.realtimeSinceStartup;
                 }
-
-
             }
         }
 
@@ -65,27 +55,47 @@ namespace MJ.AssetFrameWork.ABFrame
         public async UniTask OnGameButtonClick()
         {
             CheckVersionResult checkVersionResult = await MJAssetsABFrame.CheckAssetsVersion(gameType);
-
             if (checkVersionResult.isHot)
             {
-                updateRoot.SetActive(true);
-                downLoadTips.text = "正在更新";
                 mHotModule = MJAssetsABFrame.GetHotAssetsModule(gameType);
+                mHotModule.AddDowanLoadStateChangeCallBack(LoadChangCallBack);
                 await MJAssetsABFrame.HotAssets(gameType, false);
-
-                mHotModule = null;
-                updateRoot.SetActive(false);
-                downLoadTips.text = "更新完成";
                 Debug.Log("资源热更完成" + gameType);
-
             }
             else
             {
+                MJAssetsABFrame.Release(transform.parent.parent.parent.parent.gameObject);
                 MJAssetsABFrame.ClearResoucesAssets(true);
-                AssetBundleManager.Instance.LoadAssetBundelConfig(gameType);
+                //AssetBundleManager.Instance.LoadAssetBundelConfig(gameType);
                 MJAssetsABFrame.Instantiate("Assets/BundleDemo/" + gameType + "/Prefab/" + gameType + "Window");
             }
+        }
 
+        private void OnDisable()
+        {
+            if (mHotModule != null)
+                mHotModule.RemoveDowanLoadStateChangeCallBack(LoadChangCallBack);
+        }
+
+        public void LoadChangCallBack(E_DownloadState e_DownloadState)
+        {
+
+            switch (e_DownloadState)
+            {
+                case E_DownloadState.Waiting:
+                    updateRoot.SetActive(true);
+                    downLoadTips.text = "等待更新中";
+                    break;
+                case E_DownloadState.Downloading:
+                    updateRoot.SetActive(true);
+                    downLoadTips.text = "正在更新";
+                    break;
+                case E_DownloadState.Finished:
+                    mHotModule = null;
+                    updateRoot.SetActive(false);
+                    downLoadTips.text = "更新完成";
+                    break;
+            }
         }
 
     }

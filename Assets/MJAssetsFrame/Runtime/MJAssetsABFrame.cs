@@ -18,6 +18,7 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             GameObject recyclObjRoot = new GameObject("RecyclObjRoot");
             RecyclObjRoot = recyclObjRoot.transform;
+            RecyclObjRoot.gameObject.SetActive(false);
             DontDestroyOnLoad(recyclObjRoot);
 
             mHotAssets = new HotAssetsManager();

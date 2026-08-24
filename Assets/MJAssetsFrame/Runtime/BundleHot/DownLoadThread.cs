@@ -62,7 +62,11 @@ namespace MJ.AssetFrameWork.ABFrame
                 using (UnityWebRequest request = UnityWebRequest.Get(mDownLoadUrl))
                 {
                     request.downloadHandler = new DownloadHandlerFile(mFileSavePath);
-                    request.timeout = 30;
+
+                    // 根据文件大小动态计算 timeout
+                    float estimatedSeconds = mHotFileInfo.size / 1024f / 20f; // 假设最低 20KB/s
+                    request.timeout = Mathf.Max(30, (int)(estimatedSeconds * 2)); // 留 2 倍余量
+                    //request.timeout = 30;
 
                     Debug.Log("StartDownLoad ModuleEnum:" + mCurHotAssetsMoudle.CurBundleModuleEnum + " AssetBundle Url:" + mDownLoadUrl);
 

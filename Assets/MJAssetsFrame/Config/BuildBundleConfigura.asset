@@ -76,3 +76,11 @@ MonoBehaviour:
     rootFolderPathArr:
     - Assets/BundleDemo/ZhiZun/Textures
     signFolderPathArr: []
+  - bundleid: 0
+    moduleName: GameItem
+    isBuild: 0
+    lastClickBtnTime: 0
+    prefabPathArr: []
+    rootFolderPathArr:
+    - Assets/BundleDemo/GameItem
+    signFolderPathArr: []

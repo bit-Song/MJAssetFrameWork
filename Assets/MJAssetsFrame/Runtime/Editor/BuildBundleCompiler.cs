@@ -353,7 +353,7 @@ namespace MJ.AssetFrameWork.ABFrame
             }
             if (clear)
             {
-                string bundleConfigPath = Application.dataPath + "/" + bundleModuleEnum.ToString().ToLower() + "assetbundleconfig.json";
+                string bundleConfigPath = Application.dataPath + "/" + bundleModuleEnum.ToString().ToLower() + "bundleconfig.json";
                 AssetImporter importer = AssetImporter.GetAtPath(bundleConfigPath.Replace(Application.dataPath, "Assets"));
                 if (importer != null)
                 {
@@ -377,8 +377,13 @@ namespace MJ.AssetFrameWork.ABFrame
             //获取到工程内所有的AssetBundleName
             string[] allBundleArr = AssetDatabase.GetAllAssetBundleNames();
 
+            //string modulePrefix = bundleModuleEnum.ToString().ToLower() + "_";
+            //string moduleConfigPrefix = bundleModuleEnum.ToString().ToLower() + "bundleconfig";
             foreach (var bundleName in allBundleArr)
             {
+                ////过滤其他模块的配置文件
+                //if (!bundleName.StartsWith(modulePrefix) && !bundleName.StartsWith(moduleConfigPrefix))
+                //    continue;
                 //获取指定AssetBundleName 下的所有的文件路径
                 string[] bundleFileArr = AssetDatabase.GetAssetPathsFromAssetBundle(bundleName);
 
@@ -416,8 +421,14 @@ namespace MJ.AssetFrameWork.ABFrame
                             string assetBundleName = "";
                             if (allBundleFilePathDic.TryGetValue(dePath, out assetBundleName))
                             {
+                                ////如果依赖项已经包含这个AssetBundle就不进行处理，否则添加进依赖项
+                                //if (!info.bundleDependce.Contains(assetBundleName))
+                                //{
+                                //    info.bundleDependce.Add(assetBundleName);
+                                //}
+
                                 //如果依赖项已经包含这个AssetBundle就不进行处理，否则添加进依赖项
-                                if (!info.bundleDependce.Contains(assetBundleName))
+                                if (assetBundleName != item.Value && !info.bundleDependce.Contains(assetBundleName))
                                 {
                                     info.bundleDependce.Add(assetBundleName);
                                 }
@@ -431,7 +442,6 @@ namespace MJ.AssetFrameWork.ABFrame
             //生成AsestBundle配置文件。序列化
             string json = JsonConvert.SerializeObject(config, Formatting.Indented);
             //生成位置
-            //string bundleConfigPath = Application.dataPath + "/" + bundleModuleEnum.ToString().ToLower() + "assetbundleconfig.json";
             string bundleConfigPath = Application.dataPath + "/" + bundleModuleEnum.ToString().ToLower() + "bundleconfig.json";
             StreamWriter writer = File.CreateText(bundleConfigPath);
             writer.Write(json);

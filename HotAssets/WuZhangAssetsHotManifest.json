@@ -1,39 +1,14 @@
 {
-  "updateNotice": "窗口加载测试",
-  "downLoadUrl": "http://127.0.0.1/HotAssets/WuZhang/1/StandaloneWindows",
+  "updateNotice": "输入本次热更描述...",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/WuZhang/5/StandaloneWindows",
   "hotAssetsPatcheList": [
     {
-      "patchVersion": 1,
+      "patchVersion": 5,
       "hotAssetsList": [
         {
-          "abName": "hallbundleconfig.ab",
-          "md5": "807B447501AF92776A67A498AF685628",
-          "size": 3.16210938
-        },
-        {
-          "abName": "majiangbundleconfig.ab",
-          "md5": "54A26BAAD6082069837C36065EFF137D",
-          "size": 3.01269531
-        },
-        {
-          "abName": "niuniubundleconfig.ab",
-          "md5": "6D76A79E9595F32D76EE3A7D768F3A47",
-          "size": 3.3828125
-        },
-        {
-          "abName": "shisanshuibundleconfig.ab",
-          "md5": "A1652843F1744855AE7B5C1EA19E4EA0",
-          "size": 3.32617188
-        },
-        {
-          "abName": "shuangkoubundleconfig.ab",
-          "md5": "8D12D1C5A4C2A285E134FA57AE1C7BEF",
-          "size": 3.399414
-        },
-        {
           "abName": "wuzhangbundleconfig.ab",
-          "md5": "F05026AB9CC0FDFDBAEA68DFCD04F871",
-          "size": 3.18554688
+          "md5": "278E84C39D93CF5744988CF693F3B3C0",
+          "size": 2.93945313
         },
         {
           "abName": "wuzhang_hall.ab",
@@ -57,13 +32,8 @@
         },
         {
           "abName": "wuzhang_wuzhangwindow.ab",
-          "md5": "0D243D270C8BDD0671DB545642842649",
-          "size": 192.09375
-        },
-        {
-          "abName": "zhizunbundleconfig.ab",
-          "md5": "AC36A935309D996BE75BC35A8AAA99DB",
-          "size": 3.47363281
+          "md5": "4E3758CFD965F7F35887217F4CF925DD",
+          "size": 192.113281
         }
       ]
     }

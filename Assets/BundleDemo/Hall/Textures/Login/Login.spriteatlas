@@ -42,6 +42,7 @@ SpriteAtlas:
     - 3cf7f4405651aaa4c9331ad09ff7a905: 21300000
     - 235259a6b987fbc49921bfb5e8cd8f03: 21300000
     - 851c2aba5fb83464a891fea5412c3dfa: 21300000
+    - d97c9b9b52c4b9b43b6e83245487da5a: 21300000
     - 0240897ca308c0445b2ab5f4e3c7ac1f: 21300000
     - 72ec8e2d3628fd443b5003164a9ead4b: 21300000
     - e907f05dd3e740a4fa62d38e61ec35ec: 21300000
@@ -53,6 +54,7 @@ SpriteAtlas:
   - {fileID: 21300000, guid: 3cf7f4405651aaa4c9331ad09ff7a905, type: 3}
   - {fileID: 21300000, guid: 235259a6b987fbc49921bfb5e8cd8f03, type: 3}
   - {fileID: 21300000, guid: 851c2aba5fb83464a891fea5412c3dfa, type: 3}
+  - {fileID: 21300000, guid: d97c9b9b52c4b9b43b6e83245487da5a, type: 3}
   - {fileID: 21300000, guid: 0240897ca308c0445b2ab5f4e3c7ac1f, type: 3}
   - {fileID: 21300000, guid: 72ec8e2d3628fd443b5003164a9ead4b, type: 3}
   - {fileID: 21300000, guid: e907f05dd3e740a4fa62d38e61ec35ec, type: 3}
@@ -63,6 +65,7 @@ SpriteAtlas:
   - LoginButton
   - "Login\u692D\u5706 3"
   - "Login\u5706\u89D2\u77E9\u5F62 1"
+  - "\u8FD4\u56DE"
   - "xb_0000_\u9000-\u51FA-\u4E2D"
   - "Login\u5706\u89D2\u77E9\u5F62 1 \u62F7\u8D1D"
   - "xb_0001_\u66F4-\u65B0-\u4E2D"

@@ -43,6 +43,8 @@ namespace MJ.AssetFrameWork.ABFrame
         //缓存对象类对象池
         private ClassObjectPool<CacheObject> mCacheObjectPool = new ClassObjectPool<CacheObject>(200);
 
+        //每个资源路径的活跃实例计数（在场景中 + 在对象池中），为0时才卸载AssetBundle
+        private Dictionary<uint, int> mActiveInstanceCountDic = new Dictionary<uint, int>();
 
         //任务加载异步列表
         private List<long> mAsyncLoadingTaskList = new List<long>();
@@ -148,123 +150,19 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <returns></returns>
         public GameObject Instantiate(string path)
         {
-            path = path.EndsWith(".prefab") ? path : path + ".prefab";
-            //先从对象池查找对象
-            GameObject chacheObj = GetCacheObjectFromPools(Crc32.GetCrc32(path));
-            if (chacheObj != null)
-            {
-                chacheObj.transform.SetParent(null);
-                chacheObj.transform.localPosition = Vector3.zero;
-                chacheObj.transform.localScale = Vector3.one;
-                chacheObj.transform.rotation = Quaternion.identity;
-                return chacheObj;
-            }
-            else
-            {
-                //加载该对象
-                GameObject obj = LoadResource<GameObject>(path);
-                if (obj != null)
-                {
-                    GameObject nObj = Instantiate(path, obj, null);
-                    nObj.transform.localPosition = Vector3.zero;
-                    nObj.transform.localScale = Vector3.one;
-                    nObj.transform.rotation = Quaternion.identity;
-                    return nObj;
-                }
-
-            }
-            Debug.LogError("GameObject Load failed ,path is null ...");
-            return null;
+            return Instantiate(path, null);
         }
         public GameObject Instantiate(string path, Transform parent)
         {
-            path = path.EndsWith(".prefab") ? path : path + ".prefab";
-            //先从对象池查找对象
-            GameObject chacheObj = GetCacheObjectFromPools(Crc32.GetCrc32(path));
-            if (chacheObj != null)
-            {
-                chacheObj.transform.SetParent(parent);
-                chacheObj.transform.localPosition = Vector3.zero;
-                chacheObj.transform.localScale = Vector3.one;
-                chacheObj.transform.rotation = Quaternion.identity;
-                return chacheObj;
-            }
-            else
-            {
-                //加载该对象
-                GameObject obj = LoadResource<GameObject>(path);
-                if (obj != null)
-                {
-                    GameObject nObj = Instantiate(path, obj, parent);
-                    nObj.transform.localPosition = Vector3.zero;
-                    nObj.transform.localScale = Vector3.one;
-                    nObj.transform.rotation = Quaternion.identity;
-                    return nObj;
-                }
-
-            }
-            Debug.LogError("GameObject Load failed ,path is null ...");
-            return null;
+            return Instantiate(path, parent, Vector3.zero);
         }
         public GameObject Instantiate(string path, Transform parent, Vector3 localPosition)
         {
-            path = path.EndsWith(".prefab") ? path : path + ".prefab";
-            //先从对象池查找对象
-            GameObject chacheObj = GetCacheObjectFromPools(Crc32.GetCrc32(path));
-            if (chacheObj != null)
-            {
-                chacheObj.transform.SetParent(parent);
-                chacheObj.transform.localPosition = localPosition;
-                chacheObj.transform.localScale = Vector3.one;
-                chacheObj.transform.rotation = Quaternion.identity;
-                return chacheObj;
-            }
-            else
-            {
-                //加载该对象
-                GameObject obj = LoadResource<GameObject>(path);
-                if (obj != null)
-                {
-                    GameObject nObj = Instantiate(path, obj, parent);
-                    nObj.transform.localPosition = localPosition;
-                    nObj.transform.localScale = Vector3.one;
-                    nObj.transform.rotation = Quaternion.identity;
-                    return nObj;
-                }
-
-            }
-            Debug.LogError("GameObject Load failed ,path is null ...");
-            return null;
+            return Instantiate(path, parent, localPosition, Vector3.one);
         }
         public GameObject Instantiate(string path, Transform parent, Vector3 localPosition, Vector3 localScale)
         {
-            path = path.EndsWith(".prefab") ? path : path + ".prefab";
-            //先从对象池查找对象
-            GameObject chacheObj = GetCacheObjectFromPools(Crc32.GetCrc32(path));
-            if (chacheObj != null)
-            {
-                chacheObj.transform.SetParent(parent);
-                chacheObj.transform.localPosition = localPosition;
-                chacheObj.transform.localScale = localScale;
-                chacheObj.transform.rotation = Quaternion.identity;
-                return chacheObj;
-            }
-            else
-            {
-                //加载该对象
-                GameObject obj = LoadResource<GameObject>(path);
-                if (obj != null)
-                {
-                    GameObject nObj = Instantiate(path, obj, parent);
-                    nObj.transform.localPosition = localPosition;
-                    nObj.transform.localScale = localScale;
-                    nObj.transform.rotation = Quaternion.identity;
-                    return nObj;
-                }
-
-            }
-            Debug.LogError("GameObject Load failed ,path is null ...");
-            return null;
+            return Instantiate(path, parent, localPosition, localScale, Quaternion.identity);
         }
         public GameObject Instantiate(string path, Transform parent, Vector3 localPosition, Vector3 localScale, Quaternion quateraion)
         {
@@ -285,7 +183,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 GameObject obj = LoadResource<GameObject>(path);
                 if (obj != null)
                 {
-                    GameObject nObj = Instantiate(path, obj, parent);
+                    GameObject nObj = InstantiateClone(path, obj, parent);
                     nObj.transform.localPosition = localPosition;
                     nObj.transform.localScale = localScale;
                     nObj.transform.rotation = quateraion;
@@ -304,7 +202,7 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <param name="obj"></param>
         /// <param name="parent"></param>
         /// <returns></returns>
-        private GameObject Instantiate(string path, GameObject obj, Transform parent)
+        private GameObject InstantiateClone(string path, GameObject obj, Transform parent)
         {
             obj = GameObject.Instantiate(obj, parent, false);
             CacheObject cacheObject = mCacheObjectPool.Spawn();
@@ -313,6 +211,13 @@ namespace MJ.AssetFrameWork.ABFrame
             cacheObject.crc = Crc32.GetCrc32(path);
             cacheObject.insid = obj.GetInstanceID();
             mAllObjectDic.Add(cacheObject.insid, cacheObject);
+
+            //增加克隆物体在场景中的计数 用来卸载ab包
+            uint crc = cacheObject.crc;
+            if (mActiveInstanceCountDic.ContainsKey(crc))
+                mActiveInstanceCountDic[crc]++;
+            else
+                mActiveInstanceCountDic.Add(crc, 1);
             return obj;
         }
 
@@ -342,7 +247,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 if (mAsyncLoadingTaskList.Contains(guid))
                 {
                     mAsyncLoadingTaskList.Remove(guid);
-                    GameObject nObj = Instantiate(path, obj, null);
+                    GameObject nObj = InstantiateClone(path, obj, null);
                     return nObj;
                 }
                 Debug.LogError("Async Load GameObject Command be remover:" + path);
@@ -391,7 +296,6 @@ namespace MJ.AssetFrameWork.ABFrame
                 }
                 catch (OperationCanceledException)
                 {
-
                     return null;
                 }
             }
@@ -644,6 +548,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 GameObject.Destroy(obj);
                 if (mAllObjectDic.ContainsKey(insid))
                     mAllObjectDic.Remove(insid);
+
                 //获取该物体所在对象池
                 List<CacheObject> objectPoolList = null;
                 //得到该对象所在的对象池
@@ -655,23 +560,49 @@ namespace MJ.AssetFrameWork.ABFrame
                     {
                         objectPoolList.Remove(cacheObject);
                     }
-                    cacheObject.Release();
-                    //回收
-                    mCacheObjectPool.Recycl(cacheObject);
                 }
-                //如果该对象在对象池中不存在，或者已经全部释放了，就卸载该对象AssetBundle的资源占用
-                if (objectPoolList == null || objectPoolList.Count == 0)
+                //判断场景中是否还有克隆物体还在引用
+                if (mActiveInstanceCountDic.ContainsKey(cacheObject.crc))
                 {
-                    BundleItem item;
-                    if (mAlreayLoadAssetsDic.TryGetValue(cacheObject.crc, out item))
+                    mActiveInstanceCountDic[cacheObject.crc]--;
+                    //如果引用全被被移除了
+                    if (mActiveInstanceCountDic[cacheObject.crc] <= 0)
                     {
-                        AssetBundleManager.Instance.ReleaseAssets(item, true);
-                    }
-                    else
-                    {
-                        Debug.LogError("mAlreayLoadAssetsDic not find BundleItem Path:" + cacheObject.path);
+                        mActiveInstanceCountDic.Remove(cacheObject.crc);
+                        BundleItem item;
+                        //卸载ab包
+                        if (mAlreayLoadAssetsDic.TryGetValue(cacheObject.crc, out item))
+                        {
+                            AssetBundleManager.Instance.ReleaseAssets(item, true);
+                        }
+                        else
+                        {
+                            Debug.LogError("mAlreayLoadAssetsDic not find BundleItem Path:" + cacheObject.path);
+                        }
                     }
                 }
+
+
+                cacheObject.Release();
+                //回收
+                mCacheObjectPool.Recycl(cacheObject);
+                ////如果该对象在对象池中不存在，或者已经全部释放了，就卸载该对象AssetBundle的资源占用
+                //if (objectPoolList == null || objectPoolList.Count == 0)
+                //{
+                //    BundleItem item;
+                //    if (mAlreayLoadAssetsDic.TryGetValue(cacheObject.crc, out item))
+                //    {
+                //        AssetBundleManager.Instance.ReleaseAssets(item, true);
+                //    }
+                //    else
+                //    {
+                //        Debug.LogError("mAlreayLoadAssetsDic not find BundleItem Path:" + cacheObject.path);
+                //    }
+                //    cacheObject.Release();
+                //    //回收
+                //    mCacheObjectPool.Recycl(cacheObject);
+                //}
+                Debug.Log(mCacheObjectPool.PoolCount);
             }
             else
             {
@@ -865,6 +796,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 //清理列表
                 mAllObjectDic.Clear();
                 mObjectPoolDic.Clear();
+                mActiveInstanceCountDic.Clear();
                 ClearAllAsyncLoadTask();
             }
             else
@@ -887,7 +819,6 @@ namespace MJ.AssetFrameWork.ABFrame
                 }
                 mObjectPoolDic.Clear();
             }
-
             //释放AssetBundle 及里面资源所占用的内存
             foreach (var item in mAlreayLoadAssetsDic)
                 AssetBundleManager.Instance.ReleaseAssets(item.Value, absoluteCleaning);

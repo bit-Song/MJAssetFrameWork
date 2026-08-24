@@ -13,6 +13,7 @@ namespace MJ.AssetFrameWork.ABFrame
 
         //最大的缓存对象个数 小于等于0表示不限个数
         protected int mMaxCount = 0;
+        public int PoolCount => mPool.Count;
 
         public ClassObjectPool(int maxCount)
         {
