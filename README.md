@@ -14,6 +14,7 @@ MJAssetFrameWork 是一套基于 Unity 的 **AssetBundle 热更新框架**，提
 | UniTask | 异步任务库（零分配 async/await） |
 | Newtonsoft.Json | JSON 序列化/反序列化 |
 | UnityWebRequest | 网络下载 |
+| FtpWebRequest | FTP 远程资源上传 |
 | AES / MD5 / CRC32 | 加密与校验 |
 
 ---
@@ -29,7 +30,8 @@ Assets/
 │   │   ├── BundleSettings.cs       #   全局设置（ScriptableObject）
 │   │   ├── BundleConfig.cs        #   AB 配置文件数据结构
 │   │   ├── BundleModuleData.cs     #   模块配置数据结构
-│   │   └── BundleModuleEnum.cs    #   模块枚举（自动生成）
+│   │   ├── BundleModuleEnum.cs    #   模块枚举（自动生成）
+│   │   └── FtpConfig.cs           #   FTP 上传配置（ScriptableObject）
 │   ├── Runtime/
 │   │   ├── MJABFrameBase.cs        #   单例基类
 │   │   ├── BundleHot/              #   热更子系统
@@ -56,11 +58,12 @@ Assets/
 │   │       └── FileHelper.cs       #     文件操作工具
 │   ├── Editor/                     # 编辑器扩展
 │   │   ├── BuildWindow.cs          #   主打包窗口
-│   │   ├── BundleBehaviour.cs      #   打包窗口基类
+│   │   ├── BundleBehaviour.cs      #   打包窗口基类（含模块点击回调）
 │   │   ├── BuildBundleWindow.cs    #   AB 打包页
-│   │   ├── BuildHotPatchWindow.cs  #   热更打包页
+│   │   ├── BuildHotPatchWindow.cs  #   热更打包页（版本管理 + FTP 上传）
 │   │   ├── BundleModuleConfig.cs   #   模块配置窗口
 │   │   ├── BuildBundleConfigura.cs #   模块配置 ScriptableObject
+│   │   ├── FtpUploader.cs          #   FTP 上传工具类
 │   │   ├── LeftMenuWinow.cs        #   左侧菜单树
 │   │   ├── BundleTools.cs          #   枚举生成工具
 │   │   └── DownContentWindow.cs   #   （空，预留）
@@ -211,6 +214,7 @@ MJAssetsABFrame.Instance.InitFrameWork();
 | `BundleInfo` | 单个 AB 的配置信息（路径、CRC、名称、依赖） |
 | `BundleModuleData` | 模块打包配置（预制体路径、文件夹路径、签名路径） |
 | `BundleModuleEnum` | 模块枚举（由 `BundleTools` 自动生成） |
+| `FtpConfig` | FTP 上传配置（ScriptableObject），存储 FTP 地址、端口、账号密码、远程路径 |
 | `HotAssetsManifest` | 热更清单（公告、下载地址、补丁列表） |
 | `HotAssetsPatch` | 热更补丁（版本号、文件列表） |
 | `HotFileInfo` | 热更文件信息（包名、MD5、大小） |
@@ -221,12 +225,13 @@ MJAssetsABFrame.Instance.InitFrameWork();
 | 类 | 说明 |
 |------|------|
 | `BuildWindow` | 主打包窗口，左侧菜单 + 右侧内容区 |
-| `BundleBehaviour` | 打包窗口基类，绘制模块按钮网格 |
+| `BundleBehaviour` | 打包窗口基类，绘制模块按钮网格，提供 `OnModuleClicked` 回调 |
 | `BuildBundleWindow` | AB 打包页（打包资源 + 内嵌资源） |
-| `BuildHotPatchWindow` | 热更打包页（打包热更 + 上传资源 + 公告/版本） |
+| `BuildHotPatchWindow` | 热更打包页（版本管理 + 自动递增 + 手动配置 + FTP 上传） |
 | `BundleModuleConfig` | 模块配置窗口（预制体包/文件夹子包/单个补丁包三种配置） |
 | `BuildBundleConfigura` | 模块配置容器（ScriptableObject） |
-| `BuildBundleCompiler` | AB 打包编译器（核心打包逻辑） |
+| `BuildBundleCompiler` | AB 打包编译器（核心打包逻辑 + 版本查询 + manifest 追加） |
+| `FtpUploader` | FTP 上传工具类（单文件/目录上传、自动创建远程目录、进度回调） |
 | `BundleTools` | 枚举生成工具 |
 | `ArrayWindow` / `SignArrayWindow` | 路径数组编辑器（ReorderableList） |
 
@@ -358,9 +363,19 @@ BuildWindow (菜单: MJFrame/AssetBundle)
   │    └─ 复制到 StreamingAssets + 生成 <module>info.json
   │
   └─ HotPatch 打包页 → "打包热更"
+       ├─ 版本管理（自动递增 / 手动配置）
+       │    ├─ 自动递增：点击模块卡片 → 查询最新版本 → 目标版本 = 最新 + 1
+       │    └─ 手动配置：每模块独立输入版本号 + 下拉选择历史版本
+       │
        └─ BuildAssetBundle(data, E_BuildType.HotPatch, version, notice)
             └─ GeneratorHotAssets()
-                 └─ GeneralHotAssetsManifest() — 生成热更清单 JSON
+                 └─ GeneralHotAssetsManifest() — 追加补丁到已有 manifest（保留历史）
+
+  └─ HotPatch 打包页 → "上传资源"
+       └─ UpLoadResources()
+            ├─ 读取 FtpConfig 配置
+            ├─ 上传 manifest JSON 文件到 FTP
+            └─ 上传对应版本的热更资源文件夹到 FTP（自动创建远程目录）
 ```
 
 ---
@@ -413,6 +428,46 @@ AB 加载时优先使用热更路径，其次使用解压路径。
 通过 `BundleSettings.bundleEnctypt.isEncrypt` 控制是否加密：
 - 打包时 `BuildBundleCompiler.EncryptAllBundle()` 使用 AES 加密
 - 加载时 `AssetBundleManager.LoadAssetBundle()` 使用 AES 解密后 `LoadFromMemory`
+
+### 6.7 版本管理
+
+热更版本管理支持两种模式，通过 `BuildHotPatchWindow` 中的自动递增开关切换：
+
+**自动递增模式（默认）：**
+- 点击模块卡片时，`OnModuleClicked` 回调读取已有 manifest 获取最新版本号
+- 目标版本 = 最新版本 + 1，面板显示 "当前版本 X → 新版本 Y"
+- 打包后自动递增，无需手动输入
+
+**手动配置模式：**
+- 每个选中模块独立显示版本输入框，可单独设置不同版本号
+- 提供历史版本下拉框，可快速选择已有版本作为基准
+
+**manifest 追加机制：**
+- `GeneralHotAssetsManifest()` 读取已有 manifest，追加新补丁条目
+- 保留历史补丁记录，不再覆盖整个 manifest
+- `GetLatestHotPatchVersion()` / `GetAllHotPatchVersions()` 提供版本查询
+
+**版本缓存策略：**
+- 版本信息缓存在 `ModuleVersionInfo` 中，避免每帧磁盘 I/O
+- 仅在模块点击、窗口初始化、打包完成后刷新缓存
+
+### 6.8 FTP 上传
+
+通过 `FtpConfig`（ScriptableObject）配置 FTP 服务器信息，`FtpUploader` 实现远端上传：
+
+- 上传内容：manifest JSON + 对应版本的热更资源文件夹
+- 自动递归创建远程目录结构
+- 上传过程显示进度条
+- FTP 上传路径与 HTTP 下载路径对应同一服务器目录
+
+```
+本地打包                          FTP 服务器
+HotAssets/                        /var/www/HotAssets/
+├── HallAssetsHotManifest.json ──► ├── HallAssetsHotManifest.json
+└── Hall/6/StandaloneWindows/     └── Hall/6/StandaloneWindows/
+    ├── hallbundleconfig.ab           ├── hallbundleconfig.ab
+    └── hall_hall.ab                 └── hall_hall.ab
+```
 
 ---
 
