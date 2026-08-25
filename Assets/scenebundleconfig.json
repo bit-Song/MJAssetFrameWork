@@ -1,0 +1,11 @@
+{
+  "bundleInfoList": [
+    {
+      "path": "Assets/BundleAssetsDemo/Scene/Prefab/Cube.prefab",
+      "crc": 710735504,
+      "bundleName": "scene_cube.ab",
+      "assetName": "Cube.prefab",
+      "bundleDependce": []
+    }
+  ]
+}

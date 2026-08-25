@@ -18,13 +18,6 @@ namespace MJ.AssetFrameWork.ABFrame
         public override void DrawAddModuleButton()
         {
             base.DrawAddModuleButton();
-
-            //GUIContent addContent = EditorGUIUtility.IconContent("CollabCreate Icon".Trim(), "");
-            //if (GUILayout.Button(addContent, GUILayout.Width(130), GUILayout.Height(170)))
-            //{
-            //    //TODO  编写添加模块的代码
-            //    //BundleModuleConfig.ShowWindow("");
-            //}
         }
 
         /// <summary>

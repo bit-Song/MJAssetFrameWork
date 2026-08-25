@@ -1,0 +1,81 @@
+{
+  "updateNotice": "输入本次热更描述...",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/Login/7/StandaloneWindows",
+  "hotAssetsPatcheList": [
+    {
+      "patchVersion": 1,
+      "hotAssetsList": [
+        {
+          "abName": "loginbundleconfig.ab",
+          "md5": "5632FC50DAC69E01CB2F25C2BCE2064D",
+          "size": 1.29199219
+        },
+        {
+          "abName": "login_cube.ab",
+          "md5": "BF29D812B9FED51DB6B7188AD3E995AF",
+          "size": 45.9072266
+        }
+      ]
+    },
+    {
+      "patchVersion": 2,
+      "hotAssetsList": [
+        {
+          "abName": "loginbundleconfig.ab",
+          "md5": "5632FC50DAC69E01CB2F25C2BCE2064D",
+          "size": 1.29199219
+        },
+        {
+          "abName": "login_cube.ab",
+          "md5": "BF29D812B9FED51DB6B7188AD3E995AF",
+          "size": 45.9072266
+        }
+      ]
+    },
+    {
+      "patchVersion": 3,
+      "hotAssetsList": [
+        {
+          "abName": "loginbundleconfig.ab",
+          "md5": "5632FC50DAC69E01CB2F25C2BCE2064D",
+          "size": 1.29199219
+        },
+        {
+          "abName": "login_cube.ab",
+          "md5": "BF29D812B9FED51DB6B7188AD3E995AF",
+          "size": 45.9072266
+        }
+      ]
+    },
+    {
+      "patchVersion": 4,
+      "hotAssetsList": [
+        {
+          "abName": "loginbundleconfig.ab",
+          "md5": "5632FC50DAC69E01CB2F25C2BCE2064D",
+          "size": 1.29199219
+        },
+        {
+          "abName": "login_cube.ab",
+          "md5": "BF29D812B9FED51DB6B7188AD3E995AF",
+          "size": 45.9072266
+        }
+      ]
+    },
+    {
+      "patchVersion": 7,
+      "hotAssetsList": [
+        {
+          "abName": "loginbundleconfig.ab",
+          "md5": "5632FC50DAC69E01CB2F25C2BCE2064D",
+          "size": 1.29199219
+        },
+        {
+          "abName": "login_cube.ab",
+          "md5": "BF29D812B9FED51DB6B7188AD3E995AF",
+          "size": 45.9072266
+        }
+      ]
+    }
+  ]
+}

@@ -103,7 +103,12 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             //TODO 待处理事项 可以在打包的时候自动生成一个枚举类
         }
-
+        /// <summary>
+        /// 模块被点击时的回调（子类可重写以响应模块选中）
+        /// </summary>
+        public virtual void OnModuleClicked(BundleModuleData moduleData)
+        {
+        }
         /// <summary>
         /// 绘制添加资源模块按钮
         /// </summary>

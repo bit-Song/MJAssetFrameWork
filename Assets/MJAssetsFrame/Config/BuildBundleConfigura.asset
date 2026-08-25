@@ -14,73 +14,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   AssetBundleConfig:
   - bundleid: 0
-    moduleName: Hall
+    moduleName: Game
     isBuild: 1
-    lastClickBtnTime: 324.38492
+    lastClickBtnTime: 14956.993
     prefabPathArr:
-    - Assets/BundleDemo/Hall/Prefab
-    rootFolderPathArr:
-    - Assets/BundleDemo/Hall/Textures
+    - Assets/BundleAssetsDemo/Game/Prefab
+    rootFolderPathArr: []
     signFolderPathArr: []
   - bundleid: 0
-    moduleName: MaJiang
-    isBuild: 0
-    lastClickBtnTime: 534.25757
+    moduleName: Login
+    isBuild: 1
+    lastClickBtnTime: 547.76544
     prefabPathArr:
-    - Assets/BundleDemo/Majiang/Prefab
-    rootFolderPathArr:
-    - Assets/BundleDemo/Majiang/Textures
+    - Assets/BundleAssetsDemo/Login/Prefab
+    rootFolderPathArr: []
     signFolderPathArr: []
   - bundleid: 0
-    moduleName: NiuNiu
-    isBuild: 0
-    lastClickBtnTime: 0
+    moduleName: Scene
+    isBuild: 1
+    lastClickBtnTime: 547.9979
     prefabPathArr:
-    - Assets/BundleDemo/NiuNiu/Prefab
-    rootFolderPathArr:
-    - Assets/BundleDemo/NiuNiu/Textures
+    - Assets/BundleAssetsDemo/Scene/Prefab
+    rootFolderPathArr: []
     signFolderPathArr: []
   - bundleid: 0
-    moduleName: ShiSanShui
-    isBuild: 0
-    lastClickBtnTime: 0
-    prefabPathArr:
-    - Assets/BundleDemo/ShiSanShui/Prefab
-    rootFolderPathArr:
-    - Assets/BundleDemo/ShiSanShui/Textures
-    signFolderPathArr: []
-  - bundleid: 0
-    moduleName: ShuangKou
-    isBuild: 0
-    lastClickBtnTime: 0
-    prefabPathArr:
-    - Assets/BundleDemo/ShuangKou/Prefab
-    rootFolderPathArr:
-    - Assets/BundleDemo/ShuangKou/Textures
-    signFolderPathArr: []
-  - bundleid: 0
-    moduleName: WuZhang
-    isBuild: 0
-    lastClickBtnTime: 0
-    prefabPathArr:
-    - Assets/BundleDemo/WuZhang/Prefab
-    rootFolderPathArr:
-    - Assets/BundleDemo/WuZhang/Textures
-    signFolderPathArr: []
-  - bundleid: 0
-    moduleName: ZhiZun
-    isBuild: 0
-    lastClickBtnTime: 0
-    prefabPathArr:
-    - Assets/BundleDemo/ZhiZun/Prefab
-    rootFolderPathArr:
-    - Assets/BundleDemo/ZhiZun/Textures
-    signFolderPathArr: []
-  - bundleid: 0
-    moduleName: GameItem
+    moduleName: test
     isBuild: 0
     lastClickBtnTime: 0
     prefabPathArr: []
-    rootFolderPathArr:
-    - Assets/BundleDemo/GameItem
+    rootFolderPathArr: []
     signFolderPathArr: []

@@ -119,7 +119,13 @@ namespace MJ.AssetFrameWork.ABFrame
                 {
                     //if (File.Exists(mBundleConfigPath))
                     //    return;
-                    AssetBundle bundleConfig = AssetBundle.LoadFromFile(mBundleConfigPath);
+                    AssetBundle bundleConfig = null;
+                    //如果该AssetBundle 加密则需要进行解密
+                    if (BundleSettings.Instance.bundleEnctypt.isEncrypt)
+                        bundleConfig = AssetBundle.LoadFromMemory(AES.AESFileByteDecrypt(mBundleConfigPath, BundleSettings.Instance.bundleEnctypt.encryptKey));
+                    else
+                        bundleConfig = AssetBundle.LoadFromFile(mBundleConfigPath);
+
                     string bundleConfigJson = bundleConfig.LoadAsset<TextAsset>(mAssetBundleConfigName).text;
                     BundleConfig bundleManifeset = JsonConvert.DeserializeObject<BundleConfig>(bundleConfigJson);
 

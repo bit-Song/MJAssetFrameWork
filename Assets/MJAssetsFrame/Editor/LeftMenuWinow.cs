@@ -7,11 +7,14 @@ namespace MJ.AssetFrameWork.ABFrame
 {
     public enum E_MenuSelected
     {
-        Root,
-        Build,
-        AssetBundle,
-        HotPatch,
-        BundleSetting
+        Root = 0,
+        Build = 1,
+        AssetBundle = 2,
+        HotPatch = 3,
+        Setting = 4,
+        BundleSetting = 5,
+        UpLoadSetting = 6
+
     }
 
     public class LeftMenuWinow : TreeView
@@ -35,11 +38,18 @@ namespace MJ.AssetFrameWork.ABFrame
             assetBundle.icon = EditorGUIUtility.IconContent("BuildSettings.Editor").image as Texture2D;
             var hotPatch = new TreeViewItem(id++, 1, "HotPatch");
             hotPatch.icon = EditorGUIUtility.IconContent("BuildSettings.Editor").image as Texture2D;
-            var bundleSetting = new TreeViewItem(id++, 0, "Bundle Setting");
-            bundleSetting.icon = EditorGUIUtility.IconContent("_Popup@2x").image as Texture2D;
 
+            var setting = new TreeViewItem(id++, 0, "Setting");
+            setting.icon = EditorGUIUtility.IconContent("_Popup@2x").image as Texture2D;
+            var bundleSetting = new TreeViewItem(id++, 1, "BundleSetting");
+            bundleSetting.icon = EditorGUIUtility.IconContent("BuildSettings.Editor").image as Texture2D;
+            var upLoadSetting = new TreeViewItem(id++, 1, "UpLoadSetting");
+            upLoadSetting.icon = EditorGUIUtility.IconContent("BuildSettings.Editor").image as Texture2D;
+
+            setting.AddChild(bundleSetting);
+            setting.AddChild(upLoadSetting);
             root.AddChild(build);
-            root.AddChild(bundleSetting);
+            root.AddChild(setting);
             build.AddChild(assetBundle);
             build.AddChild(hotPatch);
             //设置默认节点处于打开状态

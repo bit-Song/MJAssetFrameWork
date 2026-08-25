@@ -22,6 +22,8 @@ namespace MJ.AssetFrameWork.ABFrame
             buildWindow.minSize = new Vector2(985, 612);
             buildWindow.maxSize = new Vector2(985, 612);
 
+            //Debug.Log("Hall Version:" + BuildBundleCompiler.GetLatestHotPatchVersion(BundleModuleEnum.Game));
+
 
         }
 
@@ -67,6 +69,9 @@ namespace MJ.AssetFrameWork.ABFrame
                             //显示BundleSettings面板内容
                             Editor.CreateEditor(BundleSettings.Instance).OnInspectorGUI();
                             break;
+                        case E_MenuSelected.UpLoadSetting:
+                            Editor.CreateEditor(FtpConfig.Instance).OnInspectorGUI();
+                            break;
                     }
                 }
             }
@@ -83,7 +88,7 @@ namespace MJ.AssetFrameWork.ABFrame
                 case E_MenuSelected.HotPatch:
                     bundleBehaviour = hotBundleWindow;
                     break;
-                case E_MenuSelected.BundleSetting:
+                case E_MenuSelected.Setting:
                     break;
             }
         }

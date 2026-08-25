@@ -36,8 +36,6 @@ namespace MJ.AssetFrameWork.ABFrame
         //所有预制体的Bundle字典
         private static Dictionary<string, List<string>> allPrefabsBundleDic = new Dictionary<string, List<string>>();
 
-        //public const string BundlePostfix = ".unity";
-
 
         /// <summary>
         /// 框架内部Resources路径
@@ -166,13 +164,11 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         public static void BuildRootSubForlder()
         {
-
             //检测父文件夹是否有配置，如果没配置就直接跳过
             if (buildModuleData.rootFolderPathArr == null || buildModuleData.rootFolderPathArr.Count == 0)
             {
                 return;
             }
-
             for (int i = 0; i < buildModuleData.rootFolderPathArr.Count; i++)
             {
                 string path = buildModuleData.rootFolderPathArr[i] + "/";
@@ -607,7 +603,19 @@ namespace MJ.AssetFrameWork.ABFrame
         /// </summary>
         public static void GeneralHotAssetsManifest()
         {
-            HotAssetsManifest assetsManifest = new HotAssetsManifest();
+            HotAssetsManifest assetsManifest = null;
+
+            //如果已经存在这个配置文件，增加配置文件的数据
+            if (File.Exists(HotAssetManifestPath))
+            {
+                string manifest = File.ReadAllText(HotAssetManifestPath);
+                assetsManifest = JsonConvert.DeserializeObject<HotAssetsManifest>(manifest);
+                if (assetsManifest == null)
+                    assetsManifest = new HotAssetsManifest();
+            }
+            else
+                assetsManifest = new HotAssetsManifest();
+
             assetsManifest.updateNotice = updateNotice;
             assetsManifest.downLoadUrl = BundleSettings.Instance.AssetDownLoadUrl + bundleModuleEnum + "/" +
                 hotPatchVersion + "/" + BundleSettings.Instance.buildTarget;
@@ -634,7 +642,53 @@ namespace MJ.AssetFrameWork.ABFrame
             string json = JsonConvert.SerializeObject(assetsManifest, Formatting.Indented);
             //写入到本地文件
             FileHelper.WriteFile(HotAssetManifestPath, Encoding.UTF8.GetBytes(json));
+        }
 
+
+
+        /// <summary>
+        /// 获取模块的最新热更补丁版本号
+        /// </summary>
+        public static int GetLatestHotPatchVersion(string moduleName)
+        {
+            string manifestPath = Application.dataPath + "/../HotAssets/" + moduleName + "AssetsHotManifest.json";
+            if (!File.Exists(manifestPath))
+                return 0;
+
+            string json = File.ReadAllText(manifestPath);
+            HotAssetsManifest manifest = JsonConvert.DeserializeObject<HotAssetsManifest>(json);
+            if (manifest == null || manifest.hotAssetsPatcheList == null || manifest.hotAssetsPatcheList.Count == 0)
+                return 0;
+
+            int maxVersion = 0;
+            foreach (var patch in manifest.hotAssetsPatcheList)
+            {
+                if (patch.patchVersion > maxVersion)
+                    maxVersion = patch.patchVersion;
+            }
+            return maxVersion;
+        }
+
+        /// <summary>
+        /// 获取模块所有历史热更补丁版本号列表
+        /// </summary>
+        public static List<int> GetAllHotPatchVersions(string moduleName)
+        {
+            List<int> versions = new List<int>();
+            string manifestPath = Application.dataPath + "/../HotAssets/" + moduleName + "AssetsHotManifest.json";
+            if (!File.Exists(manifestPath))
+                return versions;
+
+            string json = File.ReadAllText(manifestPath);
+            HotAssetsManifest manifest = JsonConvert.DeserializeObject<HotAssetsManifest>(json);
+            if (manifest == null || manifest.hotAssetsPatcheList == null)
+                return versions;
+
+            foreach (var patch in manifest.hotAssetsPatcheList)
+            {
+                versions.Add(patch.patchVersion);
+            }
+            return versions;
         }
     }
 }
