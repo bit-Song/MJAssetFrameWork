@@ -8,6 +8,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.U2D;
 using UnityEngine.UI;
+using MJ.AssetFrameWork.ABFrame.Pool;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
@@ -35,13 +36,11 @@ namespace MJ.AssetFrameWork.ABFrame
         //已经加载过的资源字典 key 为路径  value 为资源对象
         private Dictionary<uint, BundleItem> mAlreayLoadAssetsDic = new Dictionary<uint, BundleItem>();
 
-        //对象池字典
-        private Dictionary<uint, List<CacheObject>> mObjectPoolDic = new Dictionary<uint, List<CacheObject>>();
-
         //所有对象字典
         private Dictionary<int, CacheObject> mAllObjectDic = new Dictionary<int, CacheObject>();
-        //缓存对象类对象池
-        private ClassObjectPool<CacheObject> mCacheObjectPool = new ClassObjectPool<CacheObject>(200);
+        //缓存对象类对象池（统一由PoolManager管理）
+        private IObjectPool<CacheObject> mCacheObjectPool;
+        private IObjectPool<CacheObject> CacheObjPool => mCacheObjectPool ??= PoolManager.Instance.GetOrCreateClassPool(() => new CacheObject(), onGet: obj => obj.Release());
 
         //每个资源路径的活跃实例计数（在场景中 + 在对象池中），为0时才卸载AssetBundle
         private Dictionary<uint, int> mActiveInstanceCountDic = new Dictionary<uint, int>();
@@ -138,16 +137,6 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <param name="localScale"></param>
         /// <param name="quateraion"></param>
         /// <returns></returns>
-
-        /// <summary>
-        /// 同步克隆物体
-        /// </summary>
-        /// <param name="path"></param>
-        /// <param name="parent"></param>
-        /// <param name="localPosition"></param>
-        /// <param name="localScale"></param>
-        /// <param name="quateraion"></param>
-        /// <returns></returns>
         public GameObject Instantiate(string path)
         {
             return Instantiate(path, null);
@@ -167,32 +156,18 @@ namespace MJ.AssetFrameWork.ABFrame
         public GameObject Instantiate(string path, Transform parent, Vector3 localPosition, Vector3 localScale, Quaternion quateraion)
         {
             path = path.EndsWith(".prefab") ? path : path + ".prefab";
-            //先从对象池查找对象
-            GameObject chacheObj = GetCacheObjectFromPools(Crc32.GetCrc32(path));
-            if (chacheObj != null)
+            //从对象池获取对象（池空时自动同步加载AB并克隆，完整记账）
+            GameObject chacheObj = GetOrCreateGoPool(Crc32.GetCrc32(path), path).Get();
+            if (chacheObj == null)
             {
-                chacheObj.transform.SetParent(parent);
-                chacheObj.transform.localPosition = localPosition;
-                chacheObj.transform.localScale = localScale;
-                chacheObj.transform.rotation = quateraion;
-                return chacheObj;
+                Debug.LogError("GameObject Load failed ,path is null ...");
+                return null;
             }
-            else
-            {
-                //加载该对象
-                GameObject obj = LoadResource<GameObject>(path);
-                if (obj != null)
-                {
-                    GameObject nObj = InstantiateClone(path, obj, parent);
-                    nObj.transform.localPosition = localPosition;
-                    nObj.transform.localScale = localScale;
-                    nObj.transform.rotation = quateraion;
-                    return nObj;
-                }
-
-            }
-            Debug.LogError("GameObject Load failed ,path is null ...");
-            return null;
+            chacheObj.transform.SetParent(parent);
+            chacheObj.transform.localPosition = localPosition;
+            chacheObj.transform.localScale = localScale;
+            chacheObj.transform.rotation = quateraion;
+            return chacheObj;
         }
         #endregion
         /// <summary>
@@ -205,7 +180,7 @@ namespace MJ.AssetFrameWork.ABFrame
         private GameObject InstantiateClone(string path, GameObject obj, Transform parent)
         {
             obj = GameObject.Instantiate(obj, parent, false);
-            CacheObject cacheObject = mCacheObjectPool.Spawn();
+            CacheObject cacheObject = CacheObjPool.Get();
             cacheObject.obj = obj;
             cacheObject.path = path;
             cacheObject.crc = Crc32.GetCrc32(path);
@@ -231,23 +206,24 @@ namespace MJ.AssetFrameWork.ABFrame
         public async UniTask<GameObject> InstantiateAsync(string path)
         {
             path = path.EndsWith(".prefab") ? path : path + ".prefab";
-            //先从对象池查找对象
-            GameObject cacheObj = GetCacheObjectFromPools(Crc32.GetCrc32(path));
-            if (cacheObj != null)
+            IObjectPool<GameObject> goPool = GetOrCreateGoPool(Crc32.GetCrc32(path), path);
+            //先从对象池查找对象（不扩展，避免空池时触发同步加载）
+            if (goPool.TryGet(out GameObject cacheObj))
             {
                 return cacheObj;
             }
             //获取异步加载任务唯一id
             long guid = mAsyncTaskGuid;
             mAsyncLoadingTaskList.Add(guid);
-            //开始异步加载
-            GameObject obj = await LoadResourceAsync<GameObject>(path);
-            if (obj != null)
+            //开始异步加载资源（此时不实例化）
+            GameObject prefab = await LoadResourceAsync<GameObject>(path);
+            if (prefab != null)
             {
                 if (mAsyncLoadingTaskList.Contains(guid))
                 {
                     mAsyncLoadingTaskList.Remove(guid);
-                    GameObject nObj = InstantiateClone(path, obj, null);
+                    //资源已缓存，Get内部createFunc为同步取缓存并克隆，无额外IO开销
+                    GameObject nObj = goPool.Get();
                     return nObj;
                 }
                 Debug.LogError("Async Load GameObject Command be remover:" + path);
@@ -266,9 +242,8 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             path = path.EndsWith(".prefab") ? path : path + ".prefab";
             uint crc = Crc32.GetCrc32(path);
-            //先从对象池查找对象
-            GameObject cacheObj = GetCacheObjectFromPools(crc);
-            if (cacheObj != null)
+            //先从对象池查找对象（不扩展，避免空池时触发同步加载）
+            if (GetOrCreateGoPool(crc, path).TryGet(out GameObject cacheObj))
             {
                 return cacheObj;
             }
@@ -307,22 +282,88 @@ namespace MJ.AssetFrameWork.ABFrame
             return null;
         }
         /// <summary>
-        /// 从对象池中获取对象
+        /// 获取或创建按资源crc划分的GameObject克隆池（由PoolManager统一管理）
+        /// 池的创建/取出/归还/销毁回调绑定了ResourcesManager的完整记账逻辑
         /// </summary>
+        /// <param name="crc">资源路径crc</param>
+        /// <param name="path">资源路径</param>
         /// <returns></returns>
-        private GameObject GetCacheObjectFromPools(uint crc)
+        private IObjectPool<GameObject> GetOrCreateGoPool(uint crc, string path)
         {
-            List<CacheObject> objList = null;
-            mObjectPoolDic.TryGetValue(crc, out objList);
+            return PoolManager.Instance.GetOrCreateGameObjectPool(crc, () => new ObjectPool<GameObject>(
+                createFunc: () =>
+                {
+                    GameObject prefab = LoadResource<GameObject>(path);
+                    //资源加载失败返回null，由ObjectPool.Get判空直接返回null不入池
+                    if (prefab == null)
+                        return null;
+                    GameObject go = InstantiateClone(path, prefab, null);
+                    go.SetActive(false);
+                    return go;
+                },
+                onGet: go => go.SetActive(true),
+                onReturn: go =>
+                {
+                    go.SetActive(false);
+                    go.transform.SetParent(MJAssetsABFrame.RecyclObjRoot);
+                    go.transform.localPosition = Vector3.zero;
+                    go.transform.localRotation = Quaternion.identity;
+                    go.transform.localScale = Vector3.one;
+                },
+                onDestroy: OnPooledGameObjectDestroyed,
+                config: PoolManager.Instance.NewGameObjectPoolConfig()));
+        }
 
-            if (objList != null && objList.Count > 0)
+        /// <summary>
+        /// 池内对象被销毁时的统一记账出口
+        /// 自动回收/池溢出/Kill/Clear等所有销毁路径都经此方法：
+        /// 移除对象字典记录、递减活跃实例计数（归零时卸载AB包）、回收CacheObject包装类
+        /// </summary>
+        /// <param name="go"></param>
+        private void OnPooledGameObjectDestroyed(GameObject go)
+        {
+            if (go == null) return;
+
+            int insid = go.GetInstanceID();
+            if (mAllObjectDic.TryGetValue(insid, out CacheObject cacheObject))
             {
-                //直接取出对象池中第0个
-                CacheObject obj = objList[0];
-                objList.RemoveAt(0);
-                return obj.obj;
+                mAllObjectDic.Remove(insid);
+                DecreaseInstanceCount(cacheObject.crc);
+                cacheObject.Release();
+                CacheObjPool.Return(cacheObject);
             }
-            return null;
+            GameObject.Destroy(go);
+        }
+
+        /// <summary>
+        /// 递减资源路径的活跃实例计数，归零时卸载对应AssetBundle
+        /// </summary>
+        /// <param name="crc">资源路径crc</param>
+        private void DecreaseInstanceCount(uint crc)
+        {
+            if (!mActiveInstanceCountDic.TryGetValue(crc, out int count))
+                return;
+
+            count--;
+            if (count <= 0)
+            {
+                mActiveInstanceCountDic.Remove(crc);
+                BundleItem item;
+                //卸载ab包并移除资源缓存（缓存已随AB释放失效）
+                if (mAlreayLoadAssetsDic.TryGetValue(crc, out item))
+                {
+                    mAlreayLoadAssetsDic.Remove(crc);
+                    AssetBundleManager.Instance.ReleaseAssets(item, true);
+                }
+                else
+                {
+                    Debug.LogError("mAlreayLoadAssetsDic not find BundleItem crc:" + crc);
+                }
+            }
+            else
+            {
+                mActiveInstanceCountDic[crc] = count;
+            }
         }
 
         /// <summary>
@@ -533,105 +574,30 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <param name="destroy"></param>
         public void Release(GameObject obj, bool destroy = false)
         {
-            CacheObject cacheObject = null;
             int insid = obj.GetInstanceID();
 
-            mAllObjectDic.TryGetValue(insid, out cacheObject);
             //通过其他方式创建的 不支持回收
-            if (cacheObject == null)
+            if (!mAllObjectDic.TryGetValue(insid, out CacheObject cacheObject))
             {
                 Debug.LogError("Recycl Obj failed,obj is GameObject.Instantiate Create");
                 return;
             }
+
+            IObjectPool<GameObject> goPool = GetOrCreateGoPool(cacheObject.crc, cacheObject.path);
             if (destroy)
             {
-                GameObject.Destroy(obj);
-                if (mAllObjectDic.ContainsKey(insid))
-                    mAllObjectDic.Remove(insid);
-
-                //获取该物体所在对象池
-                List<CacheObject> objectPoolList = null;
-                //得到该对象所在的对象池
-                mObjectPoolDic.TryGetValue(cacheObject.crc, out objectPoolList);
-                if (objectPoolList != null)
-                {
-                    //从对象池中移除缓存对象
-                    if (objectPoolList.Contains(cacheObject))
-                    {
-                        objectPoolList.Remove(cacheObject);
-                    }
-                }
-                //判断场景中是否还有克隆物体还在引用
-                if (mActiveInstanceCountDic.ContainsKey(cacheObject.crc))
-                {
-                    mActiveInstanceCountDic[cacheObject.crc]--;
-                    //如果引用全被被移除了
-                    if (mActiveInstanceCountDic[cacheObject.crc] <= 0)
-                    {
-                        mActiveInstanceCountDic.Remove(cacheObject.crc);
-                        BundleItem item;
-                        //卸载ab包
-                        if (mAlreayLoadAssetsDic.TryGetValue(cacheObject.crc, out item))
-                        {
-                            AssetBundleManager.Instance.ReleaseAssets(item, true);
-                        }
-                        else
-                        {
-                            Debug.LogError("mAlreayLoadAssetsDic not find BundleItem Path:" + cacheObject.path);
-                        }
-                    }
-                }
-
-
-                cacheObject.Release();
-                //回收
-                mCacheObjectPool.Recycl(cacheObject);
-                ////如果该对象在对象池中不存在，或者已经全部释放了，就卸载该对象AssetBundle的资源占用
-                //if (objectPoolList == null || objectPoolList.Count == 0)
-                //{
-                //    BundleItem item;
-                //    if (mAlreayLoadAssetsDic.TryGetValue(cacheObject.crc, out item))
-                //    {
-                //        AssetBundleManager.Instance.ReleaseAssets(item, true);
-                //    }
-                //    else
-                //    {
-                //        Debug.LogError("mAlreayLoadAssetsDic not find BundleItem Path:" + cacheObject.path);
-                //    }
-                //    cacheObject.Release();
-                //    //回收
-                //    mCacheObjectPool.Recycl(cacheObject);
-                //}
-                Debug.Log(mCacheObjectPool.PoolCount);
+                //彻底销毁并联动记账（内部走OnPooledGameObjectDestroyed：销毁、递减计数、归零卸载AB）
+                goPool.Kill(obj);
             }
             else
             {
-                //回收到对象池
-                List<CacheObject> objList = null;
-                mObjectPoolDic.TryGetValue(cacheObject.crc, out objList);
-                //字典中没有该对象池
-                if (objList == null)
-                {
-                    //创建对象池
-                    objList = new List<CacheObject>();
-                    objList.Add(cacheObject);
-                    mObjectPoolDic.Add(cacheObject.crc, objList);
-                }
-                else
-                {
-                    //回收到对象池
-                    objList.Add(cacheObject);
-                }
-
-                //回收到对象回收节点下
-                if (cacheObject.obj != null)
-                {
-                    cacheObject.obj.transform.SetParent(MJAssetsABFrame.RecyclObjRoot);
-                }
-                else
+                //回收到对象池（onReturn内挂RecyclObjRoot并隐藏）
+                if (cacheObject.obj == null)
                 {
                     Debug.LogError("CacheObject.obj is null Releas Failed!");
+                    return;
                 }
+                goPool.Return(obj);
             }
         }
 
@@ -781,53 +747,61 @@ namespace MJ.AssetFrameWork.ABFrame
         /// <exception cref="NotImplementedException"></exception>
         public void ClearResoucesAssets(bool absoluteCleaning)
         {
+            ////absoluteCleaning为true 销毁所有由assetbundle加载和生成的对象，彻底释放内存占用
+            ////为false 只销毁对象池中的闲置对象，不销毁由AssetBundle克隆并在使用的对象
+            ////所有销毁路径统一经池的onDestroy回调（OnPooledGameObjectDestroyed）完成记账联动
+            //PoolManager.Instance.ClearAllGameObjectPools(absoluteCleaning);
+
+            ////true：所有克隆（含在用）已销毁，防御式兜底清理残余记账
+            ////false：在用对象的记账必须保留，否则后续无法Release、AB无法卸载
+            //if (absoluteCleaning)
+            //{
+            //    foreach (var item in mAllObjectDic.Values)
+            //    {
+            //        item.Release();
+            //    }
+            //    //清理列表
+            //    mAllObjectDic.Clear();
+            //    mActiveInstanceCountDic.Clear();
+            //    ClearAllAsyncLoadTask();
+            //}
+
+            ////释放AssetBundle 及里面资源所占用的内存
+            //foreach (var item in mAlreayLoadAssetsDic)
+            //    AssetBundleManager.Instance.ReleaseAssets(item.Value, absoluteCleaning);
+            //// 取消所有等待下载完成的任务
+            //CancleAllWaiteDownLoadTcs();
+            //mAlreayLoadAssetsDic.Clear();
+            ////释放未被引用的资源
+            //Resources.UnloadUnusedAssets();
+            ////触发垃圾回收
+            //System.GC.Collect();
+            PoolManager.Instance.ClearAllGameObjectPools(absoluteCleaning);
+
             if (absoluteCleaning)
             {
-                foreach (var item in mAllObjectDic)
+                // 所有 GameObject 都销毁
+                foreach (var item in mAllObjectDic.Values)
                 {
-                    if (item.Value.obj != null)
-                    {
-                        //销毁Object对象 回收缓存类对象，等待下次复用
-                        GameObject.Destroy(item.Value.obj);
-                        item.Value.Release();
-                        mCacheObjectPool.Recycl(item.Value);
-                    }
+                    item.Release();
                 }
-                //清理列表
+
                 mAllObjectDic.Clear();
-                mObjectPoolDic.Clear();
                 mActiveInstanceCountDic.Clear();
+
+                foreach (var item in mAlreayLoadAssetsDic)
+                {
+                    AssetBundleManager.Instance.ReleaseAssets(item.Value, true);
+                }
+
+                mAlreayLoadAssetsDic.Clear();
+
                 ClearAllAsyncLoadTask();
             }
-            else
-            {
-                foreach (var objList in mObjectPoolDic.Values)
-                {
-                    if (objList != null)
-                    {
-                        foreach (var cacheObj in objList)
-                        {
-                            if (cacheObj != null)
-                            {
 
-                                GameObject.Destroy(cacheObj.obj);
-                                cacheObj.Release();
-                                mCacheObjectPool.Recycl(cacheObj);
-                            }
-                        }
-                    }
-                }
-                mObjectPoolDic.Clear();
-            }
-            //释放AssetBundle 及里面资源所占用的内存
-            foreach (var item in mAlreayLoadAssetsDic)
-                AssetBundleManager.Instance.ReleaseAssets(item.Value, absoluteCleaning);
-            // 取消所有等待下载完成的任务
             CancleAllWaiteDownLoadTcs();
-            mAlreayLoadAssetsDic.Clear();
-            //释放未被引用的资源
+
             Resources.UnloadUnusedAssets();
-            //触发垃圾回收
             System.GC.Collect();
         }
 

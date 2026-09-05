@@ -28,6 +28,11 @@ namespace TJGenerators
         public bool texture;
         public bool pbr;
 
+        /// <summary>UI / CustomTool「添加动作」：主模型完成后走 UniRig + HunyuanMotion。</summary>
+        public bool addMotion;
+        /// <summary>混元 Motion 的 inputText；仅 addMotion 为 true 时有意义。</summary>
+        public string motionDescription;
+
         /// <summary>Sprite sequence: animation_type (idle / frontRun / backRun).</summary>
         public string animationType;
         /// <summary>Sprite sequence: AnimationClip fps; 0 = unset.</summary>
@@ -36,6 +41,9 @@ namespace TJGenerators
         public bool loopSpecified;
         /// <summary>Sprite sequence: AnimationClip loop (meaningful when loopSpecified).</summary>
         public bool loop;
+
+        /// <summary>Image layering: requested layer count; 0 = unset.</summary>
+        public int numLayers;
     }
 
     public static class TJGeneratorsTaskRecovery

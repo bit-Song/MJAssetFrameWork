@@ -3,7 +3,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using TJGenerators.Config;
 using TJGenerators.Generators;
 using TJGenerators.Pipeline;
@@ -12,7 +11,6 @@ using TJGenerators.Utils;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
-using Unity.UniAsset.Manager.Editor.InternalBridge;
 using Unity.EditorCoroutines.Editor;
 
 namespace TJGenerators
@@ -20,24 +18,25 @@ namespace TJGenerators
     /// <summary>
     /// 2D 序列帧（动作）生成窗口：输入动作描述（必填）+ 参考图（可选），输出多帧 Sprite + AnimationClip。
     /// </summary>
-    public class TJGeneratorsSpriteSequenceWindow : GenerationWindowBase, IGenerationPipelineHost, IGenerationTriggerHost, IMediaAssetPipelineHost
+    public class TJGeneratorsSpriteSequenceWindow : TJGeneratorsAssetWindowBase
     {
-        // ========== 基类抽象属性实现 ==========
         protected override ConfigType WindowConfigType => ConfigType.SpriteSequence;
         protected override string LogTag => "[TJGeneratorsSpriteSequence]";
 
-        // ========== 窗口特定字段 ==========
-        private string actionDescription = "";
+        protected override string TargetHeaderLabel => TJGeneratorsL10n.L("目标动画");
+        protected override string UnboundTargetLabel => TJGeneratorsL10n.L("未绑定（生成到历史）");
+        protected override string EmptyGeneratorsMessage =>
+            TJGeneratorsL10n.L("未找到可用的 2D 序列帧生成器，请检查 GeneratorConfig.json 中的 spriteSequenceGenerators");
+        protected override string HistoryApplyLabel => TJGeneratorsL10n.L("应用到当前动画");
+        protected override string PromptControlName => "sprite_sequence_prompt_input";
+
         private string referenceImagePath = "";
         private Texture2D referenceImageThumb;
 
-        // ========== 目标资产 ==========
-        [SerializeField]
-        private TJGeneratorsAssetReference targetAnimationAsset;
+        private static readonly Dictionary<string, TJGeneratorsSpriteSequenceWindow> s_openWindows =
+            new Dictionary<string, TJGeneratorsSpriteSequenceWindow>();
 
-        private static readonly Dictionary<string, TJGeneratorsSpriteSequenceWindow> s_openWindows = new Dictionary<string, TJGeneratorsSpriteSequenceWindow>();
-
-        // ========== 公开方法 ==========
+        // ========== 静态入口 ==========
 
         public static void ShowWindow()
         {
@@ -67,47 +66,26 @@ namespace TJGenerators
                     var window = CreateInstance<TJGeneratorsSpriteSequenceWindow>();
                     return window;
                 },
-                (w, r) => w.targetAnimationAsset = r,
+                (w, r) => w._targetAsset = r,
                 ShowWindow);
         }
 
-        // ========== 生命周期 ==========
+        // ========== 生命周期钩子 ==========
 
-        protected override void OnBootstrapWindowContent()
+        protected override void RegisterInOpenWindows()
         {
-            if (targetAnimationAsset != null && !string.IsNullOrEmpty(targetAnimationAsset.guid))
-                s_openWindows[targetAnimationAsset.guid] = this;
-
-            InitializeGeneratorsFromConfig(ConfigType.SpriteSequence);
-            OnRefreshWindowContent();
+            if (_targetAsset != null && !string.IsNullOrEmpty(_targetAsset.guid))
+                s_openWindows[_targetAsset.guid] = this;
         }
 
-        protected override void OnRefreshWindowContent()
+        protected override void UnregisterFromOpenWindows()
         {
-            generationHistory = TJGeneratorsHistoryManager.LoadHistoryForAsset(GetCurrentAssetGuid());
-            if (generationHistory.Count > 0)
-                selectedHistoryIndex = 0;
-            CheckAndRecoverInterruptedTasks();
-            Repaint();
+            if (_targetAsset != null && !string.IsNullOrEmpty(_targetAsset.guid))
+                s_openWindows.Remove(_targetAsset.guid);
         }
 
-        protected override void OnEnable()
+        protected override void OnDisableClearSubclassResources()
         {
-            base.OnEnable();
-            wantsMouseMove = true;
-
-            EditorCoroutineUtility.StartCoroutineOwnerless(UserInfoHelper.GetUserInfoCoroutine(ConfigManager.GetUserInfoUrl(), OnUserInfoLoaded));
-        }
-
-        protected override void OnDisable()
-        {
-            base.OnDisable();
-            wantsMouseMove = false;
-            if (targetAnimationAsset != null && !string.IsNullOrEmpty(targetAnimationAsset.guid))
-                s_openWindows.Remove(targetAnimationAsset.guid);
-
-            ClearPreviewCaches();
-
             if (referenceImageThumb != null)
             {
                 DestroyImmediate(referenceImageThumb);
@@ -115,144 +93,36 @@ namespace TJGenerators
             }
         }
 
-        // ========== 任务恢复 ==========
-
-        protected override string GetCurrentAssetGuid() => targetAnimationAsset?.guid ?? "";
-
-        protected override void SetHistory(List<TJGeneratorsGenerationHistoryItem> history)
-        {
-            generationHistory = history;
-            if (generationHistory.Count > 0) selectedHistoryIndex = 0;
-        }
-
         protected override void OnGeneratorRestoredFromTask(ModelGeneratorBase generator)
         {
             base.OnGeneratorRestoredFromTask(generator);
             currentSelectedModel = BuildModelInfoFromGenerator(generator);
-            isGenerating = true;
-            generationStatus = TJGeneratorsL10n.L("恢复中...");
         }
-
-        // ========== UI 绘制 ==========
-
-        private void OnGUI()
-        {
-            if (Event.current.type == EventType.MouseMove)
-                Repaint();
-            var splitLayout = UIComponents.CalculateFixedSplitLayout(
-                position.width,
-                CommonStyles.MainWindowMinSize.y,
-                CommonStyles.LeftPanelFixedWidth,
-                CommonStyles.MinHistoryPanelWidth,
-                CommonStyles.OuterMargin);
-            minSize = new Vector2(splitLayout.WindowMinWidth, splitLayout.WindowMinHeight);
-            isVerticalLayout = false;
-            currentHistoryPanelWidth = splitLayout.RightPanelWidth;
-            _effectiveLeftPanelWidth = CommonStyles.LeftComponentWidth;
-
-            if (_generators == null || _generators.Count == 0)
-            {
-                EditorGUI.DrawRect(new Rect(0, 0, position.width, position.height), CommonStyles.WindowBackgroundColor);
-                EditorGUILayout.HelpBox(TJGeneratorsL10n.L("未找到可用的 2D 序列帧生成器，请检查 GeneratorConfig.json 中的 spriteSequenceGenerators"), MessageType.Error);
-                return;
-            }
-
-            UIComponents.DrawAdaptiveLayoutBackground(
-                new Rect(0, 0, position.width, position.height),
-                false,
-                splitLayout.LeftPanelWidth,
-                position.height);
-
-            GUILayout.BeginHorizontal();
-            DrawLeftPanelColumn(
-                splitLayout.LeftPanelWidth,
-                ref scrollPosition,
-                () =>
-                {
-                    GUILayout.Space(CommonStyles.LeftContentPadding);
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Space(CommonStyles.LeftContentPadding);
-                    GUILayout.BeginVertical(
-                        GUILayout.Width(CommonStyles.LeftComponentWidth),
-                        GUILayout.MinWidth(CommonStyles.LeftComponentWidth),
-                        GUILayout.MaxWidth(CommonStyles.LeftComponentWidth));
-
-                    UIComponents.DrawTargetHeaderComposite(
-                        TJGeneratorsL10n.L("目标动画"),
-                        DrawTargetHeaderContentRect,
-                        SelectTargetAnimationAsset
-                    );
-                    GUILayout.Space(CommonStyles.Space2);
-                    UIComponents.DrawModelSelector(
-                        currentSelectedModel?.Name ?? _currentGenerator?.DisplayName ?? TJGeneratorsL10n.L("未选择"),
-                        currentSelectedModel,
-                        OnModelSelected,
-                        ConfigType.SpriteSequence
-                    );
-                    GUILayout.Space(CommonStyles.Space3);
-                    DrawInputSection();
-                    GUILayout.Space(CommonStyles.Space3);
-                    DrawAdvancedSection();
-                    GUILayout.Space(CommonStyles.Space3);
-
-                    GUILayout.EndVertical();
-                    GUILayout.Space(CommonStyles.LeftContentPadding);
-                    GUILayout.EndHorizontal();
-                    GUILayout.Space(CommonStyles.LeftContentPadding);
-                });
-
-            GUILayout.Space(splitLayout.GapWidth);
-
-            DrawHistoryPanel(currentHistoryPanelWidth);
-            GUILayout.EndHorizontal();
-
-            DrawLeftPanelBottomDock(splitLayout.LeftPanelWidth, DrawGenerationSection);
-        }
-
-        private void DrawTargetHeaderContentRect(Rect rect)
-        {
-            if (targetAnimationAsset != null && targetAnimationAsset.IsValid())
-            {
-                string assetPath = targetAnimationAsset.GetPath();
-                string name = Path.GetFileNameWithoutExtension(assetPath);
-                if (GUI.Button(rect, name, CommonStyles.TargetPrefabNameStyle))
-                    SelectTargetAnimationAsset();
-                EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
-            }
-            else
-            {
-                GUI.Label(rect, TJGeneratorsL10n.L("未绑定（生成到历史）"), CommonStyles.ContentStyle);
-            }
-        }
-
-        private void OnModelSelected(AIModelInfo model) => OnModelSelectedBase(model);
 
         protected override void ResetInputStateAfterModelChange()
         {
             var config = GetCurrentGeneratorConfig();
-            ResetTextPromptIfHidden(config, ref actionDescription);
+            ResetTextPromptIfHidden(config, ref textPrompt);
             ClearSingleReferenceImageWhenUploadHidden(config, ref referenceImagePath, ref referenceImageThumb);
         }
 
-        private void SelectTargetAnimationAsset()
+        // ========== UI ==========
+
+        protected override void DrawLeftPanelBody()
         {
-            if (targetAnimationAsset == null || !targetAnimationAsset.IsValid())
-                return;
-            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(targetAnimationAsset.GetPath());
-            if (clip != null)
-            {
-                EditorGUIUtility.PingObject(clip);
-                Selection.activeObject = clip;
-            }
+            DrawInputSection();
+            GUILayout.Space(CommonStyles.Space3);
+            DrawConfigurationSection();
+            GUILayout.Space(CommonStyles.Space3);
         }
 
-        private void DrawInputSection()
+        protected override bool CanStartGeneration =>
+            _currentGenerator != null && !string.IsNullOrEmpty(referenceImagePath);
+
+        protected override void DrawInputSection()
         {
             var genConfig = GetCurrentGeneratorConfig();
-            actionDescription = DrawConfiguredTextPromptInput(
-                actionDescription,
-                "sprite_sequence_prompt_input",
-                genConfig);
+            textPrompt = DrawConfiguredTextPromptInput(textPrompt, PromptControlName, genConfig);
 
             if (ShouldShowImageUpload(genConfig))
             {
@@ -277,38 +147,16 @@ namespace TJGenerators
             }
         }
 
-        private void DrawAdvancedSection()
-        {
-            var provider = _currentGenerator as IGeneratorParameterProvider;
-            showAdvancedSettings = DrawConfiguredAdvancedSettingsFoldout(
-                showAdvancedSettings,
-                provider,
-                GetCurrentGeneratorParameters());
-        }
-
-        private void DrawGenerationSection(LeftPanelBottomDock.Layout layout)
-        {
-            UIComponents.DrawGenerationSectionAt(
-                layout,
-                isGenerating,
-                generationProgress,
-                generationStatus,
-                _currentGenerator != null && !string.IsNullOrEmpty(referenceImagePath),
-                StartGeneration,
-                null,
-                Repaint);
-        }
-
         // ========== 历史记录 ==========
 
-        private void DrawHistoryPanel(float panelWidth)
+        protected override void DrawHistoryPanel(float panelWidth)
         {
             DrawStandardHistoryPanel(panelWidth, new StandardHistoryPanelOptions
             {
                 GetLargePreviewTexture = GetPreviewTextureForHistoryItem,
                 DrawTilePreview = DrawSpriteSequenceHistoryPreview,
                 GetModelLabel = item => item.GetTimeString(),
-                DrawHistoryActions = DrawHistoryActions,
+                DrawHistoryActions = () => DrawDefaultHistoryActions(),
             });
         }
 
@@ -325,29 +173,6 @@ namespace TJGenerators
                 GUI.DrawTexture(rect, preview, ScaleMode.ScaleToFit);
             else
                 EditorGUI.DrawRect(rect, new Color(0.15f, 0.15f, 0.15f, 1f));
-        }
-
-        private void DrawHistoryActions()
-        {
-            GUILayout.Space(5);
-            GUILayout.BeginHorizontal();
-            bool hasSelection = selectedHistoryIndex >= 0 && selectedHistoryIndex < generationHistory.Count;
-            bool isGenerating = hasSelection && generationHistory[selectedHistoryIndex].isGenerating;
-            GUI.enabled = hasSelection && !isGenerating;
-
-            if (GUILayout.Button(TJGeneratorsL10n.L("应用到当前动画"), GUILayout.Height(25)))
-            {
-                ApplyHistoryToAnimation(selectedHistoryIndex);
-            }
-            if (GUILayout.Button(TJGeneratorsL10n.L("在项目中显示"), GUILayout.Height(25)))
-            {
-                ShowHistoryInProject(selectedHistoryIndex);
-            }
-            GUI.enabled = true;
-
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.Space(10);
         }
 
         private Texture2D GetPreviewTextureForHistoryItem(TJGeneratorsGenerationHistoryItem item)
@@ -446,7 +271,7 @@ namespace TJGenerators
 
         // ========== 生成逻辑 ==========
 
-        private void StartGeneration()
+        protected override void OnStartGeneration()
         {
             if (_currentGenerator == null)
             {
@@ -454,21 +279,17 @@ namespace TJGenerators
                 return;
             }
 
-
-            isGenerating = true;
-            generationStatus = TJGeneratorsL10n.L("准备中...");
-            generationProgress = 0f;
+            MarkGenerationStarted();
 
             if (_currentGenerator is DynamicGenerator dynamicGen)
             {
                 dynamicGen.SetImagePath(!string.IsNullOrEmpty(referenceImagePath) ? referenceImagePath : null);
             }
 
-            string assetGuid = targetAnimationAsset?.guid ?? "";
-            EditorCoroutineUtility.StartCoroutineOwnerless(_pipeline.StartGeneration(_currentGenerator, assetGuid));
+            StartPipelineForCurrentGenerator();
         }
 
-        private void ApplyHistoryToAnimation(int index)
+        protected override void ApplyHistoryToAsset(int index)
         {
             if (index < 0 || index >= generationHistory.Count) return;
             var item = generationHistory[index];
@@ -485,13 +306,13 @@ namespace TJGenerators
                 Repaint();
                 return;
             }
-            if (targetAnimationAsset == null || !targetAnimationAsset.IsValid())
+            if (_targetAsset == null || !_targetAsset.IsValid())
             {
                 Debug.LogWarning($"{LogTag} {TJGeneratorsL10n.L("当前未绑定目标动画资产，无法应用。")}");
                 return;
             }
 
-            string targetPath = targetAnimationAsset.GetPath();
+            string targetPath = _targetAsset.GetPath();
             try
             {
                 File.Copy(item.modelPath, targetPath, true);
@@ -510,38 +331,12 @@ namespace TJGenerators
             }
         }
 
-        private void ShowHistoryInProject(int index)
+        // ========== IMediaAssetPipelineHost ==========
+
+        public override void OnGenerationCompleted(string assetPath)
         {
-            if (index < 0 || index >= generationHistory.Count) return;
-            var item = generationHistory[index];
-            if (string.IsNullOrEmpty(item.modelPath)) return;
-            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(item.modelPath);
-            if (clip != null)
-            {
-                Selection.activeObject = clip;
-                EditorGUIUtility.PingObject(clip);
-            }
-        }
-
-        // ========== IGenerationPipelineHost ==========
-
-        public TJGeneratorsAssetReference GetTargetAsset() => targetAnimationAsset;
-
-
-        public void OnGenerationCompleted(string assetPath)
-        {
-            if (generationHistory != null && !string.IsNullOrEmpty(assetPath))
-            {
-                int index = generationHistory.FindIndex(x => x.modelPath == assetPath || x.imagePath == assetPath);
-                if (index >= 0)
-                {
-                    selectedHistoryIndex = index;
-                }
-            }
-
-            isGenerating = false;
-            generationStatus = TJGeneratorsL10n.L("完成");
-            generationProgress = 1f;
+            base.OnGenerationCompleted(assetPath);
+            MarkGenerationCompleted();
 
             if (!string.IsNullOrEmpty(assetPath))
             {
@@ -554,21 +349,15 @@ namespace TJGenerators
             }
         }
 
-        public string GetAssetSavePath(PipelineMediaType _type, ModelGeneratorBase generator)
+        public override string GetAssetSavePath(PipelineMediaType type, ModelGeneratorBase generator)
         {
-            if (_type != PipelineMediaType.Texture) return null;
-
-            if (!AssetDatabase.IsValidFolder("Assets/TJGenerators"))
-                AssetDatabase.CreateFolder("Assets", "TJGenerators");
-            if (!AssetDatabase.IsValidFolder("Assets/TJGenerators/History"))
-                AssetDatabase.CreateFolder("Assets/TJGenerators", "History");
-            string uniqueName = "SpriteSequence_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".png";
-            return AssetDatabase.GenerateUniqueAssetPath("Assets/TJGenerators/History/" + uniqueName);
+            if (type != PipelineMediaType.Texture) return null;
+            return BuildHistoryTexturePath("SpriteSequence_");
         }
 
-        public void OnAssetSaved(PipelineMediaType _type, string savePath, ModelGeneratorBase generator)
+        public override void OnAssetSaved(PipelineMediaType type, string savePath, ModelGeneratorBase generator)
         {
-            if (_type != PipelineMediaType.Texture) return;
+            if (type != PipelineMediaType.Texture) return;
 
             var importer = AssetImporter.GetAtPath(savePath) as TextureImporter;
             if (importer != null)
@@ -578,13 +367,6 @@ namespace TJGenerators
             }
             TJGeneratorsGenerationLabel.EnableLabel(TJGeneratorsAssetReference.FromPath(savePath));
         }
-
-        public void StartGeneration(ModelGeneratorBase generator)
-        {
-            if (generator == _currentGenerator)
-                StartGeneration();
-        }
-
     }
 }
 #endif

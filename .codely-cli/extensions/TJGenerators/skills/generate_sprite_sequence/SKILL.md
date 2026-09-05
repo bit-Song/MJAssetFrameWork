@@ -61,7 +61,7 @@ Output：多个 **Sprite PNG 帧** + 一个 **AnimationClip (`.anim`)** 驱动 `
 不适用：
 - 静态 2D 图标 / 道具 / 立绘 → `generate_sprite`
 - 无参考图、用户也无法提供 → 先用 `generate_sprite` 出图
-- 3D 模型动画 → `generate_animated_character` / `generate_rigged_animated_model`
+- 3D 模型动画 → `animated-character-generator`（`generate_animated_character` / `generate_rigged_model` / `generate_model_motion`）
 - 自定义动作（非 idle/frontRun/backRun） → 不支持，只能选这 3 种之一
 - 天空盒 / 音乐 / 通用图 → 各自专属 skill
 

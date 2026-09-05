@@ -137,18 +137,44 @@ namespace TJGenerators
         }
 
         /// <summary>
-        /// 加载 Material 资产的生成历史（assetGuid 绑定 .mat）。
+        /// 加载 Material 资产的生成历史（assetGuid 绑定 .mat；并合并同名贴图上的历史）。
         /// </summary>
         public static List<TJGeneratorsGenerationHistoryItem> LoadHistoryForMaterialAsset(string materialAssetPath)
         {
             string materialGuid = string.IsNullOrEmpty(materialAssetPath)
                 ? ""
                 : AssetDatabase.AssetPathToGUID(materialAssetPath);
-            return LoadHistoryForAsset(materialGuid ?? "");
+            var result = LoadHistoryForAsset(materialGuid ?? "");
+
+            // 从历史 PNG 打开时会立刻绑到同名 .mat；旧记录可能仍挂在贴图 GUID 上
+            if (!string.IsNullOrEmpty(materialAssetPath))
+            {
+                string dir = Path.GetDirectoryName(materialAssetPath)?.Replace('\\', '/') ?? "";
+                string baseName = Path.GetFileNameWithoutExtension(materialAssetPath);
+                foreach (var ext in new[] { ".png", ".jpg", ".jpeg" })
+                {
+                    string texPath = string.IsNullOrEmpty(dir) ? baseName + ext : $"{dir}/{baseName}{ext}";
+                    string texGuid = AssetDatabase.AssetPathToGUID(texPath);
+                    if (string.IsNullOrEmpty(texGuid))
+                        continue;
+
+                    foreach (var item in LoadHistoryForAsset(texGuid))
+                    {
+                        if (result.Any(r => r.taskId == item.taskId))
+                            continue;
+                        result.Add(item);
+                    }
+                }
+
+                result = result.OrderByDescending(h => h.timestamp).ToList();
+            }
+
+            return result;
         }
 
         /// <summary>
         /// 材质生成完成时：Material 绑定 assetGuid，贴图 PNG 绑定 linkedAssetGuid。
+        /// 仅在尚无有效材质 GUID 时，才回退到贴图旁同名 .mat。
         /// </summary>
         public static void TryLinkMaterialTextureHistoryItem(TJGeneratorsGenerationHistoryItem item)
         {
@@ -160,19 +186,65 @@ namespace TJGenerators
             if (string.IsNullOrEmpty(textureGuid))
                 return;
 
-            string matPath = Path.ChangeExtension(texturePath, ".mat");
-            string matGuid = AssetDatabase.AssetPathToGUID(matPath);
-
             item.linkedAssetGuid = textureGuid;
 
-            if (!string.IsNullOrEmpty(matGuid))
+            // 已有指向真实 Material 的 assetGuid（如 New Material.mat）时保留，勿改成贴图旁同名 .mat
+            if (!string.IsNullOrEmpty(item.assetGuid)
+                && !string.Equals(item.assetGuid, textureGuid, StringComparison.Ordinal))
             {
-                if (string.IsNullOrEmpty(item.assetGuid)
-                    || string.Equals(item.assetGuid, textureGuid, StringComparison.Ordinal))
+                string existingPath = AssetDatabase.GUIDToAssetPath(item.assetGuid);
+                if (!string.IsNullOrEmpty(existingPath)
+                    && existingPath.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)
+                    && AssetDatabase.LoadAssetAtPath<Material>(existingPath) != null)
                 {
-                    item.assetGuid = matGuid;
+                    return;
                 }
             }
+
+            string matPath = Path.ChangeExtension(texturePath, ".mat");
+            string matGuid = AssetDatabase.AssetPathToGUID(matPath);
+            if (!string.IsNullOrEmpty(matGuid))
+                item.assetGuid = matGuid;
+        }
+
+        /// <summary>
+        /// 从材质历史贴图反查生成时绑定的目标 Material 路径（如 New Material.mat）。
+        /// </summary>
+        public static string TryResolveMaterialPathForTexture(string texturePath)
+        {
+            if (string.IsNullOrEmpty(texturePath))
+                return null;
+
+            string normalized = texturePath.Replace('\\', '/');
+            string textureGuid = AssetDatabase.AssetPathToGUID(normalized);
+            var allHistory = LoadAllHistory(filterMissingModelFiles: false);
+
+            TJGeneratorsGenerationHistoryItem best = null;
+            foreach (var h in allHistory)
+            {
+                bool matchByGuid = !string.IsNullOrEmpty(textureGuid)
+                    && (string.Equals(h.linkedAssetGuid, textureGuid, StringComparison.Ordinal)
+                        || string.Equals(h.assetGuid, textureGuid, StringComparison.Ordinal));
+                bool matchByPath = !string.IsNullOrEmpty(h.modelPath)
+                    && string.Equals(h.modelPath.Replace('\\', '/'), normalized, StringComparison.OrdinalIgnoreCase);
+                if (!matchByGuid && !matchByPath)
+                    continue;
+
+                if (string.IsNullOrEmpty(h.assetGuid)
+                    || string.Equals(h.assetGuid, textureGuid, StringComparison.Ordinal))
+                    continue;
+
+                string matPath = AssetDatabase.GUIDToAssetPath(h.assetGuid);
+                if (string.IsNullOrEmpty(matPath)
+                    || !matPath.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)
+                    || AssetDatabase.LoadAssetAtPath<Material>(matPath) == null)
+                    continue;
+
+                if (best == null || h.timestamp > best.timestamp)
+                    best = h;
+            }
+
+            return best == null ? null : AssetDatabase.GUIDToAssetPath(best.assetGuid);
         }
 
         public static void SaveHistory(List<TJGeneratorsGenerationHistoryItem> history)

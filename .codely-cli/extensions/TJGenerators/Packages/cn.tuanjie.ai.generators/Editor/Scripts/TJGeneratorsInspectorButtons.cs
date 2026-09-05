@@ -138,7 +138,7 @@ namespace TJGenerators
                 {
                     DrawAIGenerateHeaderButton(
                         TJGeneratorsL10n.L("使用 TJGenerators AI 生成表面材质"),
-                        () => TJGeneratorsSpriteWindow.OpenForMaterialTextureAsset(texturePath));
+                        () => TJGeneratorsMaterialWindow.OpenForMaterialTextureAsset(texturePath));
                 }
                 else
                 {
@@ -264,7 +264,7 @@ namespace TJGenerators
             {
                 DrawAIGenerateHeaderButton(
                     TJGeneratorsL10n.L("使用 TJGenerators AI 生成表面材质"),
-                    () => TJGeneratorsSpriteWindow.OpenForMaterialAsset(path));
+                    () => TJGeneratorsMaterialWindow.OpenForMaterialAsset(path));
             }
 
             return true;

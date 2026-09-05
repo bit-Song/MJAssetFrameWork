@@ -45,6 +45,7 @@ Output: PNG imported as **Texture2D (Default type)**, auto-saved to `Assets/TJGe
 
 不适用：
 - 透明背景 sprite（图标、物品、角色立绘）→ `generate_sprite`
+- 一张图拆成多图层 → `generate_image_layers`
 - 天空盒 → `generate_skybox`
 - 音频 → `generate_audio_clip` / `generate_sound_effect`
 - 3D 模型 → `generate_3d_model`

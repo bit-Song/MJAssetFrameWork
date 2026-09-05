@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.GlobalIllumination;
+using MJ.AssetFrameWork.ABFrame.Pool;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
@@ -20,6 +21,9 @@ namespace MJ.AssetFrameWork.ABFrame
             RecyclObjRoot = recyclObjRoot.transform;
             RecyclObjRoot.gameObject.SetActive(false);
             DontDestroyOnLoad(recyclObjRoot);
+
+            //初始化对象池管理器（懒创建PoolManager节点，先于任何取池操作）
+            PoolManager.Instance.InitInfo();
 
             mHotAssets = new HotAssetsManager();
             mDecompressAssets = new AssetsDecompressManager();

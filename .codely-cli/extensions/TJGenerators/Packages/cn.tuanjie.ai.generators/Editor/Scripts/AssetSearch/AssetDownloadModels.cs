@@ -49,6 +49,15 @@ namespace TJGenerators.AssetSearch
         public DownloadTaskStatus Status { get; set; }
         public string PrefabPath { get; set; }
         public string Message { get; set; }
+
+        /// <summary>本次下载是否首次（首次扣积分）；重复下载为 false。</summary>
+        public bool IsFirstDownload { get; set; }
+
+        /// <summary>本次实际扣除的积分；重复下载为 0。落账失败时可能为 0 且 BillingError 非空。</summary>
+        public int CreditsCharged { get; set; }
+
+        /// <summary>后台落账失败时的错误信息（best-effort，不阻断下载本身）。</summary>
+        public string BillingError { get; set; }
     }
 
     /// <summary>

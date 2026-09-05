@@ -1,6 +1,6 @@
 {
-  "updateNotice": "输入本次热更描述...",
-  "downLoadUrl": "http://127.0.0.1/HotAssets/Login/7/StandaloneWindows",
+  "updateNotice": "输入本次热更描述...测试",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/Login/8/StandaloneWindows",
   "hotAssetsPatcheList": [
     {
       "patchVersion": 1,
@@ -74,6 +74,21 @@
           "abName": "login_cube.ab",
           "md5": "BF29D812B9FED51DB6B7188AD3E995AF",
           "size": 45.9072266
+        }
+      ]
+    },
+    {
+      "patchVersion": 8,
+      "hotAssetsList": [
+        {
+          "abName": "loginbundleconfig.ab",
+          "md5": "5632FC50DAC69E01CB2F25C2BCE2064D",
+          "size": 1.29199219
+        },
+        {
+          "abName": "login_cube.ab",
+          "md5": "7D7E423A99738CAC15549C006A7335DF",
+          "size": 43.7548828
         }
       ]
     }

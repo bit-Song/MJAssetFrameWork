@@ -56,6 +56,7 @@ namespace MJ.AssetFrameWork.ABFrame
                     "FTP上传资源",
                     $"[{uploadedFileCount}/{totalFileCount}] {Path.GetFileName(localPath)}",
                     progress);
+                Debug.Log("资源文件上传成功:"+ localPath);
             }
             catch (Exception e)
             {

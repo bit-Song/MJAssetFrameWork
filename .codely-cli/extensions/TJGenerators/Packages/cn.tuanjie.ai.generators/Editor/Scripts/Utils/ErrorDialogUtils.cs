@@ -61,11 +61,12 @@ namespace TJGenerators.Utils
                 TechnicalMessage = $"{originalTitle}: {originalMessage}"
             };
 
-            // Meshy API 422错误 - 姿态识别失败（步骤3绑定失败）
+            // 绑骨/动画失败（姿态识别等）
             if ((originalMessage.Contains("422") && 
                 (originalMessage.Contains("Pose estimation failed") || 
                  originalMessage.Contains("please provide a valid model"))) ||
-                 originalMessage.Contains("step 3 rig failed"))
+                 originalMessage.Contains("step 3 rig failed") ||
+                 originalMessage.Contains("rig failed"))
             {
                 result.Title = TJGeneratorsL10n.L("动画绑定失败");
                 result.Message = TJGeneratorsL10n.L("系统无法为您生成的模型绑定动画骨骼，这通常是因为您的提示词描述的不是一个角色。\n\n") +

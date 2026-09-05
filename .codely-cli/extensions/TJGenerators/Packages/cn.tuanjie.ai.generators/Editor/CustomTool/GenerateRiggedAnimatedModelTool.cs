@@ -90,7 +90,9 @@ namespace UnityTcp.Editor.Tools
                 get => !string.IsNullOrEmpty(BackendRigTaskId) ? BackendRigTaskId : BackendMotionTaskId;
                 set
                 {
-                    if (string.IsNullOrEmpty(BackendRigTaskId) && string.IsNullOrEmpty(BackendMotionTaskId))
+                    if (!string.IsNullOrEmpty(BackendRigTaskId))
+                        BackendMotionTaskId = value;
+                    else
                         BackendRigTaskId = value;
                 }
             }
@@ -395,7 +397,7 @@ namespace UnityTcp.Editor.Tools
                 t.ErrorMessage = message;
                 t.EndTime      = DateTime.Now;
             });
-            GenerationNotifier.NotifyFailed("generate_rigged_animated_model", task.TaskId, task.BackendRigTaskId, message,
+            GenerationNotifier.NotifyFailed("generate_animated_character", task.TaskId, task.BackendRigTaskId, message,
                 new JObject
                 {
                     ["session_id"]    = sessionId,
@@ -527,7 +529,7 @@ namespace UnityTcp.Editor.Tools
                     t.ErrorMessage = friendly.TechnicalMessage;
                     t.EndTime      = DateTime.Now;
                 });
-                string failedTool = _task.PipelineType == "rig_only" ? "generate_rigged_model" : "generate_rigged_animated_model";
+                string failedTool = _task.PipelineType == "rig_only" ? "generate_rigged_model" : "generate_animated_character";
                 GenerationNotifier.NotifyFailed(failedTool, _task.TaskId, _task.BackendRigTaskId, friendly.TechnicalMessage,
                     new JObject
                     {
@@ -565,7 +567,7 @@ namespace UnityTcp.Editor.Tools
         {
             return _task?.PipelineType == "motion_only"
                 ? "generate_model_motion"
-                : "generate_rigged_animated_model";
+                : "generate_animated_character";
         }
 
         // Returning null prevents GenerationPipeline.BindModelToPrefab from replacing the prefab
@@ -689,7 +691,7 @@ namespace UnityTcp.Editor.Tools
             "Rig an existing 3D model (FBX/OBJ) into a Humanoid skeleton using UniRig AI. " +
             "Output: a rigged Humanoid FBX + a Capsule placeholder Prefab with Animator (T-Pose, no animation). " +
             "Use this when you only need rigging/skinning without motion animation. " +
-            "For rigging + motion in one step use generate_rigged_animated_model instead. " +
+            "For rigging + motion in one step use generate_animated_character instead. " +
             "Parameters: source_model_path (required, path to FBX/OBJ in Assets), " +
             "prefab_output_path (optional, defaults to History/), " +
             "force_overwrite (bool, default false). " +
@@ -734,7 +736,7 @@ namespace UnityTcp.Editor.Tools
                         { "message", submitResult.Message }
                     };
 
-                string createdPrefabPath = GenerateAnimatedCharacterTool.CreateBlankPrefab(prefabOutputPath);
+                string createdPrefabPath = ReplaceAnimatedCharacterModelTool.CreateBlankPrefab(prefabOutputPath);
                 if (string.IsNullOrEmpty(createdPrefabPath))
                     return Fail($"Failed to create prefab at: {prefabOutputPath}");
 
@@ -869,7 +871,7 @@ namespace UnityTcp.Editor.Tools
             "Generate motion animation for an already-rigged Humanoid FBX model using HunyuanMotion. " +
             "Output: motion FBX + AnimatorController that auto-loops in Play Mode. " +
             "Use when you already have a Humanoid FBX and only need motion animation. " +
-            "For rigging + motion from a raw model use generate_rigged_animated_model instead. " +
+            "For rigging + motion from a raw model use generate_animated_character instead. " +
             "Parameters: rigged_model_path (required, path to Humanoid FBX in Assets), " +
             "motion_description (required, e.g. 'a backflip'), " +
             "target_prefab_path (optional, prefab to assign controller+avatar to), " +
@@ -1041,26 +1043,27 @@ namespace UnityTcp.Editor.Tools
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Tool C: generate_rigged_animated_model
+    // Tool C: generate_animated_character  (UniRig + HunyuanMotion)
     // ─────────────────────────────────────────────────────────────────────────────
-    public static class GenerateRiggedAnimatedModelTool
+    public static class GenerateAnimatedCharacterTool
     {
         private static int _taskIdCounter = 0;
 
-        [ExecuteCustomTool.CustomTool("generate_rigged_animated_model",
+        [ExecuteCustomTool.CustomTool("generate_animated_character",
             "Rig an existing 3D model AND generate motion animation in one shot: " +
             "Stage 1 uses UniRig AI to rig the model into a Humanoid skeleton; " +
             "Stage 2 uses HunyuanMotion to generate the requested motion. " +
-            "Use this when you have a raw (unrigged) 3D model and want it animated. " +
+            "Requires source_model_path (existing FBX/OBJ). This tool does NOT accept a text-to-3D prompt, action_id, topology, or other Meshy-style params. " +
+            "To create a character from scratch (same as UI 添加动作): call generate_3d_model_by_tripo_p1 or generate_3d_model_by_rodin with add_motion=true and motion_description. " +
             "For rigging only use generate_rigged_model. For motion on an already-rigged model use generate_model_motion. " +
-            "DO NOT use for generating characters from scratch — use generate_animated_character instead. " +
             "Parameters: source_model_path (required), motion_description (required, e.g. 'a running cycle'), " +
             "prefab_output_path (optional), force_overwrite (bool, default false), " +
             "action_duration (float, seconds, default 5), cfg_strength (float, default 5), " +
             "random_seed (int, 0=server random, default 0), " +
             "loop (optional bool, default true; set false for one-shot non-looping motions). " +
-            "Takes ~2-5 minutes total. Poll with query_rigged_animated_model_status every 15-20 seconds.")]
-        public static object GenerateRiggedAnimatedModel(JObject parameters)
+            "Takes ~2-5 minutes total. After submit, END THE TURN and wait for <bg_task_done>; " +
+            "use query_animated_character_status only once as a last-resort fallback.")]
+        public static object GenerateCharacter(JObject parameters)
         {
 #if UNITY_EDITOR
             try
@@ -1076,7 +1079,19 @@ namespace UnityTcp.Editor.Tools
                 string sessionId         = parameters["session_id"]?.ToString() ?? "";
 
                 if (string.IsNullOrEmpty(sourceModelPath))
+                {
+                    bool looksLikeFromScratch =
+                        !string.IsNullOrEmpty(parameters["prompt"]?.ToString()) ||
+                        parameters["action_id"] != null ||
+                        parameters["topology"] != null ||
+                        parameters["pose_mode"] != null;
+                    if (looksLikeFromScratch)
+                        return Fail(
+                            "'source_model_path' is required. From scratch, do NOT call this tool with a prompt or Meshy params (action_id/topology/pose_mode). " +
+                            "Call generate_3d_model_by_tripo_p1 (default) or generate_3d_model_by_rodin with add_motion=true and motion_description " +
+                            "(same as UI: 3D model → UniRig → HunyuanMotion).");
                     return Fail("'source_model_path' is required");
+                }
                 if (string.IsNullOrEmpty(motionDescription))
                     return Fail("'motion_description' is required");
                 if (!File.Exists(PathUtils.ToAbsoluteAssetPath(sourceModelPath)))
@@ -1108,7 +1123,7 @@ namespace UnityTcp.Editor.Tools
                         { "message", submitResult.Message }
                     };
 
-                string createdPrefabPath = GenerateAnimatedCharacterTool.CreateBlankPrefab(prefabOutputPath);
+                string createdPrefabPath = ReplaceAnimatedCharacterModelTool.CreateBlankPrefab(prefabOutputPath);
                 if (string.IsNullOrEmpty(createdPrefabPath))
                     return Fail($"Failed to create prefab at: {prefabOutputPath}");
 
@@ -1142,7 +1157,7 @@ namespace UnityTcp.Editor.Tools
                 EditorCoroutineUtility.StartCoroutineOwnerless(
                     pipeline.StartFromSubmittedTask(generator, historyAssetGuid, submitResult.BackendTaskId, null));
 
-                TJLog.Log($"[GenerateRiggedAnimatedModelTool] 任务已提交 task_id={taskId}, backend={submitResult.BackendTaskId}");
+                TJLog.Log($"[GenerateAnimatedCharacterTool] 任务已提交 task_id={taskId}, backend={submitResult.BackendTaskId}");
 
                 return new Dictionary<string, object>
                 {
@@ -1165,12 +1180,12 @@ namespace UnityTcp.Editor.Tools
                         "STEP 2 (critical): END THIS RESPONSE TURN immediately. " +
                         "STEP 3 (automatic): A <bg_task_done> notification will appear in your next turn (~5 min) " +
                         "containing ALL results (rigged_model_path, motion_fbx_path, controller_path, timing, etc.). " +
-                        "*** POLLING IS STRICTLY FORBIDDEN — only call query_rigged_animated_model_status ONCE as a last-resort fallback. ***" }
+                        "*** POLLING IS STRICTLY FORBIDDEN — only call query_animated_character_status ONCE as a last-resort fallback. ***" }
                 };
             }
             catch (Exception e)
             {
-                TJLog.LogError($"[GenerateRiggedAnimatedModelTool] Error: {e}");
+                TJLog.LogError($"[GenerateAnimatedCharacterTool] Error: {e}");
                 return Fail($"Error: {e.Message}");
             }
 #else
@@ -1178,8 +1193,8 @@ namespace UnityTcp.Editor.Tools
 #endif
         }
 
-        [ExecuteCustomTool.CustomTool("query_rigged_animated_model_status",
-            "Query the status of a rig+motion generation task (generate_rigged_animated_model). Use ONLY as a one-time fallback if no <bg_task_done> notification arrives. " +
+        [ExecuteCustomTool.CustomTool("query_animated_character_status",
+            "Query the status of a rig+motion generation task (generate_animated_character). Use ONLY as a one-time fallback if no <bg_task_done> notification arrives. " +
             "Status progression: 'rigging' (0-50%) → 'rigging_complete' → 'generating_motion' (50-100%) → 'completed'. " +
             "Failure modes: 'failed' (rigging failed), 'rigging_complete_motion_failed' (rigging ok but motion failed). " +
             "When completed: rigged_model_path, motion_fbx_path, controller_path, prefab_path all returned. " +
@@ -1208,8 +1223,8 @@ namespace UnityTcp.Editor.Tools
 #endif
         }
 
-        [ExecuteCustomTool.CustomTool("list_rigged_animated_model_tasks",
-            "List all active and recent rig+motion generation tasks (generate_rigged_animated_model).")]
+        [ExecuteCustomTool.CustomTool("list_animated_character_tasks",
+            "List all active and recent rig+motion generation tasks (generate_animated_character).")]
         public static object ListTasks(JObject parameters)
         {
 #if UNITY_EDITOR

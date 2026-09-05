@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using MJ.AssetFrameWork.ABFrame.Pool;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
@@ -75,8 +76,12 @@ namespace MJ.AssetFrameWork.ABFrame
         //key bundleName 
         //value asserbundleCache
         private Dictionary<string, AssetBundleCache> mAllAlreadAssetBundleDic = new Dictionary<string, AssetBundleCache>();
-        //创建一个assetbundleCache类的对象池
-        public ClassObjectPool<AssetBundleCache> mAssetBundleCachePool = new ClassObjectPool<AssetBundleCache>(200);
+        //AssetBundleCache类对象池（统一由PoolManager管理）
+        private IObjectPool<AssetBundleCache> mAssetBundleCachePool;
+        private IObjectPool<AssetBundleCache> AbCachePool => mAssetBundleCachePool ??= PoolManager.Instance.GetOrCreateClassPool(
+            () => new AssetBundleCache(),
+            onGet: obj => { obj.assetBundle = null; obj.refereaceCount = 0; },
+            onDestroy: obj => { obj.assetBundle = null; obj.refereaceCount = 0; });
 
         /// <summary>
         /// 生成AssetBundleConfig配置文件路径
@@ -235,7 +240,7 @@ namespace MJ.AssetFrameWork.ABFrame
             if (bundle == null || (bundle != null && bundle.assetBundle == null))
             {
                 //从类对象池中取出一个AssetBundleCache
-                bundle = mAssetBundleCachePool.Spawn();
+                bundle = AbCachePool.Get();
                 string hotFilePath = BundleSettings.Instance.GetHotAssetsPath(bundleModuleEnum) + bundleName;
                 HotAssetsModule module = MJAssetsABFrame.GetHotAssetsModule(bundleModuleEnum);
                 //是否使用的是热更路径
@@ -322,7 +327,7 @@ namespace MJ.AssetFrameWork.ABFrame
                         mAllAlreadAssetBundleDic.Remove(assetBundleName);
                         bundleCacheItem.Release(unLoad);
                         //回收对象
-                        mAssetBundleCachePool.Recycl(bundleCacheItem);
+                        AbCachePool.Return(bundleCacheItem);
                     }
                 }
                 else

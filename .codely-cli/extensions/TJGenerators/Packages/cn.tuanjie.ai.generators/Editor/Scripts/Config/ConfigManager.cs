@@ -31,8 +31,10 @@ namespace TJGenerators.Config
         private static RemoteConfig GetRawConfig()
         {
             if (_config != null) return _config;
-            _config = LoadDefaultConfig();
-            return _config;
+            var loaded = LoadDefaultConfig();
+            if (HasValidGenerators(loaded))
+                _config = loaded;
+            return loaded;
         }
 
         private static bool HasValidGenerators(RemoteConfig config)
@@ -315,6 +317,12 @@ namespace TJGenerators.Config
 
         private static RemoteConfig LoadDefaultConfig()
         {
+            // Domain reload 后 OnEnable 时 AssetDatabase 可能尚未就绪。
+            // 先走文件系统直读，避免落到空 fallback 导致窗口模型变成「未选择」。
+            var fileConfig = TryLoadConfigFromFileSystem();
+            if (fileConfig != null)
+                return fileConfig;
+
             string[] possiblePaths = GetPossiblePaths();
             foreach (string path in possiblePaths)
             {
@@ -357,38 +365,59 @@ namespace TJGenerators.Config
                 }
             }
 
-            string scriptPath = GetScriptDirectory();
-            if (!string.IsNullOrEmpty(scriptPath))
-            {
-                string configPath = Path.Combine(scriptPath, DefaultConfigFileName + ".json");
-                if (File.Exists(configPath))
-                {
-                    try
-                    {
-                        var config = JsonUtility.FromJson<RemoteConfig>(File.ReadAllText(configPath));
-                        if (config != null && HasValidGenerators(config))
-                        {
-                            TJLog.Log("从本地文件加载成功: " + configPath);
-                            return config;
-                        }
-                    }
-                    catch (Exception e) { TJLog.LogWarning("读取本地文件失败: " + e.Message); }
-                }
-            }
-
             return LoadFallbackConfig();
         }
 
-        private static string GetScriptDirectory()
+        /// <summary>
+        /// 不依赖 AssetDatabase，从磁盘读取 GeneratorConfig.json（兼容 domain reload 早期时机）。
+        /// </summary>
+        private static RemoteConfig TryLoadConfigFromFileSystem()
         {
-            string[] guids = AssetDatabase.FindAssets(DefaultConfigFileName + " t:TextAsset");
-            foreach (string guid in guids)
+            foreach (string fullPath in EnumerateFilesystemConfigPaths())
             {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (!string.IsNullOrEmpty(path) && path.EndsWith(DefaultConfigFileName + ".json", StringComparison.OrdinalIgnoreCase))
-                    return Path.GetDirectoryName(path);
+                if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
+                    continue;
+                try
+                {
+                    var config = JsonUtility.FromJson<RemoteConfig>(File.ReadAllText(fullPath));
+                    if (config != null && HasValidGenerators(config))
+                    {
+                        TJLog.Log("从本地文件加载成功: " + fullPath);
+                        return config;
+                    }
+                }
+                catch (Exception e)
+                {
+                    TJLog.LogWarning("读取本地文件失败: " + fullPath + ", " + e.Message);
+                }
             }
             return null;
+        }
+
+        private static List<string> EnumerateFilesystemConfigPaths()
+        {
+            var paths = new List<string>();
+            string relativeConfig = Path.Combine("Editor", "Config", DefaultConfigFileName + ".json");
+
+            try
+            {
+                var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ConfigManager).Assembly);
+                if (packageInfo != null && !string.IsNullOrEmpty(packageInfo.resolvedPath))
+                    paths.Add(Path.Combine(packageInfo.resolvedPath, relativeConfig));
+            }
+            catch (Exception e)
+            {
+                TJLog.LogWarning("解析包路径失败: " + e.Message);
+            }
+
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            if (string.IsNullOrEmpty(projectRoot))
+                return paths;
+
+            foreach (string assetPath in GetPossiblePaths())
+                paths.Add(Path.GetFullPath(Path.Combine(projectRoot, assetPath)));
+
+            return paths;
         }
 
         private static RemoteConfig LoadFallbackConfig()

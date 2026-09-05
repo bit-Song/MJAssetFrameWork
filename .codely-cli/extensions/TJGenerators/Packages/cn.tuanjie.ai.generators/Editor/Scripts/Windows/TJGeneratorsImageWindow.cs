@@ -2,36 +2,36 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using UnityEditor;
-using UnityEngine;
-using Unity.EditorCoroutines.Editor;
 using TJGenerators.Config;
 using TJGenerators.Generators;
 using TJGenerators.Pipeline;
 using TJGenerators.UI;
 using TJGenerators.Utils;
+using UnityEditor;
+using UnityEngine;
 
 namespace TJGenerators
 {
     /// <summary>
     /// TJGenerators 图片生成窗口（文生图 / 图生图）。
     /// </summary>
-    public class TJGeneratorsImageWindow : GenerationWindowBase, IGenerationPipelineHost, IGenerationTriggerHost, IMediaAssetPipelineHost
+    public class TJGeneratorsImageWindow : TJGeneratorsAssetWindowBase
     {
         // ========== 固定配置 ==========
         protected override ConfigType WindowConfigType => ConfigType.Image;
         protected override string LogTag => "[TJGeneratorsImage]";
 
-        [SerializeField]
-        private string textPrompt = "";
-
-        [SerializeField]
-        private TJGeneratorsAssetReference targetImageAsset;
+        protected override string TargetHeaderLabel => TJGeneratorsL10n.L("目标图片");
+        protected override string UnboundTargetLabel => TJGeneratorsL10n.L("未绑定（生成时自动创建）");
+        protected override string EmptyGeneratorsMessage =>
+            TJGeneratorsL10n.L("未找到可用的图片生成器，请检查配置");
+        protected override string HistoryApplyLabel => TJGeneratorsL10n.L("应用到当前图片");
+        protected override string PromptControlName => "image_prompt_input";
 
         private readonly List<string> referenceImagePaths = new List<string>();
         private readonly List<Texture2D> referenceUploadedImages = new List<Texture2D>();
 
-        private static readonly Dictionary<string, TJGeneratorsImageWindow> imageOpenWindows =
+        private static readonly Dictionary<string, TJGeneratorsImageWindow> s_openWindows =
             new Dictionary<string, TJGeneratorsImageWindow>();
 
         private Texture2D imagePreviewTexture;
@@ -40,6 +40,26 @@ namespace TJGenerators
         private MaterialTemplateOptionConfig selectedPromptTemplate;
 
         private const string UnityTerrainHeightmapTemplateId = "unity_terrain_heightmap";
+
+        /// <summary>Qwen 图片分层 generator id（numLayers 参数控制层数）</summary>
+        public const string LayeringGeneratorId = "image-layering";
+
+        /// <summary>Seedream 5.0 Pro 图片分层 generator id（自动分层，底图 + 最多 16 层）</summary>
+        public const string SeedreamLayeringGeneratorId = "seedream-image-layering";
+
+        /// <summary>是否为图片分层类 generator（多张 RGBA PNG 输出，走 ImageLayers_ 占位与兄弟图层导入）</summary>
+        public static bool IsLayeringGenerator(string generatorId)
+        {
+            if (string.IsNullOrEmpty(generatorId)) return false;
+            return string.Equals(generatorId, LayeringGeneratorId, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(generatorId, SeedreamLayeringGeneratorId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>是否为 Seedream 自动分层 generator（无 numLayers 参数，层数由模型决定）</summary>
+        public static bool IsSeedreamLayeringGenerator(string generatorId)
+        {
+            return string.Equals(generatorId, SeedreamLayeringGeneratorId, StringComparison.OrdinalIgnoreCase);
+        }
 
         [SerializeField]
         private bool terrainHeightmapGaussianBlur = true;
@@ -111,7 +131,7 @@ namespace TJGenerators
 
             GenerationWindowBase.OpenForAsset(
                 assetPath,
-                imageOpenWindows,
+                s_openWindows,
                 "[TJGeneratorsImage]",
                 TJGeneratorsL10n.L("TJGenerators 图片 - {0}"),
                 () =>
@@ -119,7 +139,7 @@ namespace TJGenerators
                     var window = CreateInstance<TJGeneratorsImageWindow>();
                     return window;
                 },
-                (w, r) => w.targetImageAsset = r,
+                (w, r) => w._targetAsset = r,
                 ShowWindow);
         }
 
@@ -128,46 +148,23 @@ namespace TJGenerators
             || assetPath.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
             || assetPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
 
-        // ========== 生命周期 ==========
-        protected override void OnBootstrapWindowContent()
-        {
-            if (targetImageAsset != null && !string.IsNullOrEmpty(targetImageAsset.guid))
-                imageOpenWindows[targetImageAsset.guid] = this;
+        // ========== 生命周期钩子 ==========
 
-            InitializeGeneratorsFromConfig(ConfigType.Image);
-            OnRefreshWindowContent();
+        protected override void RegisterInOpenWindows()
+        {
+            if (_targetAsset != null && !string.IsNullOrEmpty(_targetAsset.guid))
+                s_openWindows[_targetAsset.guid] = this;
         }
 
-        protected override void OnRefreshWindowContent()
+        protected override void UnregisterFromOpenWindows()
         {
-            RefreshHistory();
-            CheckAndRecoverInterruptedTasks();
+            if (_targetAsset != null && !string.IsNullOrEmpty(_targetAsset.guid))
+                s_openWindows.Remove(_targetAsset.guid);
         }
 
-        protected override void OnEnable()
+        protected override void OnDisableClearSubclassResources()
         {
-            base.OnEnable();
-            wantsMouseMove = true;
-
-            EditorCoroutineUtility.StartCoroutineOwnerless(
-                UserInfoHelper.GetUserInfoCoroutine(
-                    ConfigManager.GetUserInfoUrl(),
-                    OnUserInfoLoaded
-                )
-            );
-        }
-
-        protected override void OnDisable()
-        {
-            base.OnDisable();
-            wantsMouseMove = false;
-            if (targetImageAsset != null && !string.IsNullOrEmpty(targetImageAsset.guid))
-            {
-                imageOpenWindows.Remove(targetImageAsset.guid);
-            }
-
             imagePreviewTexture = null;
-            ClearPreviewCaches();
 
             foreach (var tex in referenceUploadedImages)
             {
@@ -178,147 +175,58 @@ namespace TJGenerators
             referenceImagePaths.Clear();
         }
 
-        // ========== 任务恢复 ==========
-        protected override string GetCurrentAssetGuid() => GetCurrentImageAssetGuid();
-
-        protected override void SetHistory(List<TJGeneratorsGenerationHistoryItem> history) =>
-            generationHistory = history;
-
-        protected override void OnGeneratorRestoredFromTask(ModelGeneratorBase generator)
+        protected override void OnBeforeDrawChrome(UIComponents.FixedSplitLayoutParams _)
         {
-            base.OnGeneratorRestoredFromTask(generator);
-            isGenerating = true;
-            generationStatus = TJGeneratorsL10n.L("恢复中...");
-            Repaint();
+            maxSize = new Vector2(10000f, 10000f);
+        }
+
+        protected override void ResetInputStateAfterModelChange()
+        {
+            var config = GetCurrentGeneratorConfig();
+            ResetTextPromptIfHidden(config, ref textPrompt);
+            ClearReferenceImagesWhenUploadHidden(config, referenceImagePaths, referenceUploadedImages);
+        }
+
+        protected override void OnModelSelectedBase(AIModelInfo model)
+        {
+            base.OnModelSelectedBase(model);
+            selectedPromptTemplate = null;
+            if (_currentGenerator is DynamicGenerator dg)
+                dg.SetPromptTemplateSelection(null);
+            UploadImageComponents.TrimReferenceImagesToMax(
+                referenceImagePaths,
+                referenceUploadedImages,
+                GetMaxReferenceImages());
         }
 
         // ========== UI ==========
-        private void OnGUI()
+
+        protected override void DrawLeftPanelBody()
         {
-            if (Event.current.type == EventType.MouseMove)
-                Repaint();
-            var splitLayout = UIComponents.CalculateFixedSplitLayout(
-                position.width,
-                CommonStyles.MainWindowMinSize.y,
-                CommonStyles.LeftPanelFixedWidth,
-                CommonStyles.MinHistoryPanelWidth,
-                CommonStyles.OuterMargin);
-            minSize = new Vector2(splitLayout.WindowMinWidth, splitLayout.WindowMinHeight);
-            maxSize = new Vector2(10000f, 10000f);
-            isVerticalLayout = false;
-            currentHistoryPanelWidth = splitLayout.RightPanelWidth;
-            _effectiveLeftPanelWidth = CommonStyles.LeftComponentWidth;
-
-            if (_generators == null || _generators.Count == 0)
-            {
-                EditorGUI.DrawRect(
-                    new Rect(0, 0, position.width, position.height),
-                    CommonStyles.WindowBackgroundColor
-                );
-                EditorGUILayout.HelpBox(TJGeneratorsL10n.L("未找到可用的图片生成器，请检查配置"), MessageType.Error);
-                return;
-            }
-
-            UIComponents.DrawAdaptiveLayoutBackground(
-                new Rect(0, 0, position.width, position.height),
-                false,
-                splitLayout.LeftPanelWidth,
-                position.height
-            );
-
-            GUILayout.BeginHorizontal();
-            DrawLeftPanelColumn(
-                splitLayout.LeftPanelWidth,
-                ref scrollPosition,
-                () =>
-                {
-                    GUILayout.Space(CommonStyles.LeftContentPadding);
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Space(CommonStyles.LeftContentPadding);
-                    GUILayout.BeginVertical(
-                        GUILayout.Width(CommonStyles.LeftComponentWidth),
-                        GUILayout.MinWidth(CommonStyles.LeftComponentWidth),
-                        GUILayout.MaxWidth(CommonStyles.LeftComponentWidth));
-
-                    UIComponents.DrawTargetHeaderComposite(
-                        TJGeneratorsL10n.L("目标图片"),
-                        DrawTargetHeaderContentRect,
-                        SelectTargetImageAsset
-                    );
-                    GUILayout.Space(CommonStyles.Space2);
-
-                    UIComponents.DrawModelSelector(
-                        currentSelectedModel?.Name ?? _currentGenerator?.DisplayName ?? TJGeneratorsL10n.L("未选择"),
-                        currentSelectedModel,
-                        OnModelSelected,
-                        ConfigType.Image
-                    );
-
-                    GUILayout.Space(CommonStyles.Space3);
-
-                    DrawInputSection();
-
-                    GUILayout.Space(CommonStyles.Space3);
-
-                    DrawConfigurationSection();
-
-                    GUILayout.Space(CommonStyles.Space3);
-
-                    DrawTerrainHeightmapAfterGenerationSection();
-
-                    GUILayout.Space(CommonStyles.Space3);
-
-                    GUILayout.EndVertical();
-                    GUILayout.Space(CommonStyles.LeftContentPadding);
-                    GUILayout.EndHorizontal();
-                    GUILayout.Space(CommonStyles.LeftContentPadding);
-                });
-
-            GUILayout.Space(splitLayout.GapWidth);
-
-            DrawHistoryPanel(currentHistoryPanelWidth);
-            GUILayout.EndHorizontal();
-
-            DrawLeftPanelBottomDock(splitLayout.LeftPanelWidth, DrawGenerationSection);
+            DrawInputSection();
+            GUILayout.Space(CommonStyles.Space3);
+            DrawConfigurationSection();
+            GUILayout.Space(CommonStyles.Space3);
+            DrawTerrainHeightmapAfterGenerationSection();
+            GUILayout.Space(CommonStyles.Space3);
         }
 
-        private void DrawTargetHeaderContentRect(Rect rect)
+        protected override bool CanStartGeneration
         {
-            if (targetImageAsset != null && targetImageAsset.IsValid())
+            get
             {
-                string imageName = Path.GetFileNameWithoutExtension(targetImageAsset.GetPath());
-                if (GUI.Button(rect, imageName, CommonStyles.TargetPrefabNameStyle))
-                    SelectTargetImageAsset();
-                EditorGUIUtility.AddCursorRect(rect, MouseCursor.Link);
+                if (_currentGenerator == null || string.IsNullOrWhiteSpace(textPrompt))
+                    return false;
+                var layout = GetCurrentGeneratorConfig()?.uiLayout;
+                if (layout != null && layout.imageUploadRequired && referenceImagePaths.Count == 0)
+                    return false;
+                return true;
             }
-            else
-            {
-                GUI.Label(rect, TJGeneratorsL10n.L("未绑定（生成时自动创建）"), CommonStyles.ContentStyle);
-            }
-        }
-
-        private void SelectTargetImageAsset()
-        {
-            if (targetImageAsset == null || !targetImageAsset.IsValid())
-                return;
-            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(targetImageAsset.GetPath());
-            if (tex != null)
-            {
-                EditorGUIUtility.PingObject(tex);
-                Selection.activeObject = tex;
-            }
-        }
-
-        private GeneratorConfig GetActiveImageGeneratorConfig()
-        {
-            return _currentGenerator == null
-                ? null
-                : GetGeneratorConfigFromIndex(_currentGenerator.GeneratorId);
         }
 
         private void ShowPromptTemplateSelectorWindow()
         {
-            var cfg = GetActiveImageGeneratorConfig();
+            var cfg = GetCurrentGeneratorConfig();
             if (cfg?.promptTemplateSelector?.options == null || cfg.promptTemplateSelector.options.Count == 0)
             {
                 ErrorDialogUtils.ShowErrorDialog(
@@ -351,7 +259,7 @@ namespace TJGenerators
 
         private void DrawPromptTemplateSelector()
         {
-            var cfg = GetActiveImageGeneratorConfig();
+            var cfg = GetCurrentGeneratorConfig();
             if (cfg?.promptTemplateSelector == null
                 || !cfg.promptTemplateSelector.enabled
                 || cfg.promptTemplateSelector.options == null
@@ -374,12 +282,12 @@ namespace TJGenerators
             GUILayout.Space(CommonStyles.Space3);
         }
 
-        private void DrawInputSection()
+        protected override void DrawInputSection()
         {
             DrawPromptTemplateSelector();
 
             var genConfig = GetCurrentGeneratorConfig();
-            textPrompt = DrawConfiguredTextPromptInput(textPrompt, "image_prompt_input", genConfig);
+            textPrompt = DrawConfiguredTextPromptInput(textPrompt, PromptControlName, genConfig);
 
             if (ShouldShowImageUpload(genConfig))
             {
@@ -396,7 +304,7 @@ namespace TJGenerators
                 "image_reference_upload");
         }
 
-        private void DrawConfigurationSection()
+        protected override void DrawConfigurationSection()
         {
             var provider = _currentGenerator as IGeneratorParameterProvider;
 
@@ -422,22 +330,6 @@ namespace TJGenerators
                 showAdvancedSettings,
                 provider,
                 filteredParams
-            );
-        }
-
-        private void DrawGenerationSection(LeftPanelBottomDock.Layout layout)
-        {
-            bool canGenerate =
-                _currentGenerator != null && !string.IsNullOrWhiteSpace(textPrompt);
-            UIComponents.DrawGenerationSectionAt(
-                layout,
-                isGenerating,
-                generationProgress,
-                generationStatus,
-                canGenerate,
-                StartGeneration,
-                null,
-                Repaint
             );
         }
 
@@ -580,7 +472,7 @@ namespace TJGenerators
             }
         }
 
-        private void DrawHistoryPanel(float panelWidth)
+        protected override void DrawHistoryPanel(float panelWidth)
         {
             DrawStandardHistoryPanel(panelWidth, new StandardHistoryPanelOptions
             {
@@ -592,7 +484,7 @@ namespace TJGenerators
                 GetPrimaryLabel = GetHistoryUserPromptLabel,
                 GetModelLabel = item => GetModelDisplayLabelFromIndex(item.modelVersion),
                 ShowContextMenu = ShowHistoryContextMenu,
-                DrawHistoryActions = DrawHistoryActions,
+                DrawHistoryActions = () => DrawDefaultHistoryActions(),
             });
         }
 
@@ -707,29 +599,6 @@ namespace TJGenerators
             return null;
         }
 
-        private void DrawHistoryActions()
-        {
-            GUILayout.Space(5);
-            GUILayout.BeginHorizontal();
-
-            bool hasSelection = selectedHistoryIndex >= 0 && selectedHistoryIndex < generationHistory.Count;
-            bool isGenerating = hasSelection && generationHistory[selectedHistoryIndex].isGenerating;
-            GUI.enabled = hasSelection && !isGenerating;
-
-            if (GUILayout.Button(TJGeneratorsL10n.L("应用到当前图片"), GUILayout.Height(25)))
-                ApplyHistoryToImage(selectedHistoryIndex);
-
-            if (GUILayout.Button(TJGeneratorsL10n.L("在项目中显示"), GUILayout.Height(25)))
-                ShowHistoryInProject(selectedHistoryIndex);
-
-            GUI.enabled = true;
-
-            GUILayout.FlexibleSpace();
-
-            GUILayout.EndHorizontal();
-            GUILayout.Space(10);
-        }
-
         private static string GetHistoryUserPromptLabel(TJGeneratorsGenerationHistoryItem item)
         {
             if (item == null)
@@ -744,7 +613,7 @@ namespace TJGenerators
             var item = generationHistory[index];
             var menu = new GenericMenu();
 
-            menu.AddItem(new GUIContent(TJGeneratorsL10n.L("应用到当前图片")), false, () => ApplyHistoryToImage(index));
+            menu.AddItem(new GUIContent(HistoryApplyLabel), false, () => ApplyHistoryToAsset(index));
             menu.AddItem(new GUIContent(TJGeneratorsL10n.L("在项目中显示")), false, () => ShowHistoryInProject(index));
 
             if (CanGenerateTerrainFromHistoryItem(item))
@@ -783,7 +652,7 @@ namespace TJGenerators
             menu.ShowAsContext();
         }
 
-        private void ApplyHistoryToImage(int index)
+        protected override void ApplyHistoryToAsset(int index)
         {
             if (index < 0 || index >= generationHistory.Count)
                 return;
@@ -808,7 +677,7 @@ namespace TJGenerators
                 return;
             }
 
-            if (targetImageAsset == null || !targetImageAsset.IsValid())
+            if (_targetAsset == null || !_targetAsset.IsValid())
             {
                 Debug.LogWarning($"{LogTag} {TJGeneratorsL10n.L("请先绑定或创建目标图片资产。")}");
                 return;
@@ -816,7 +685,7 @@ namespace TJGenerators
 
             string srcExt = string.IsNullOrEmpty(item.modelPath) ? ".png" : Path.GetExtension(item.modelPath);
             if (string.IsNullOrEmpty(srcExt)) srcExt = ".png";
-            string targetPathForDialog = Path.ChangeExtension(targetImageAsset.GetPath(), srcExt);
+            string targetPathForDialog = Path.ChangeExtension(_targetAsset.GetPath(), srcExt);
             if (
                 !EditorUtility.DisplayDialog(
                     TJGeneratorsL10n.L("确认替换"),
@@ -838,10 +707,6 @@ namespace TJGenerators
         }
 
         /// <summary>
-        /// 覆盖目标纹理资产前释放本窗口持有的引用，避免 Windows 下文件仍被 Unity/预览占用导致 File.Copy 失败。
-        /// 行为对齐 <see cref="TJGeneratorsSpriteWindow"/> 在应用历史前对 <c>spritePreviewTexture</c> 的处理。
-        /// </summary>
-        /// <summary>
         /// 将源图片复制到当前目标资产；若扩展名变化则删除旧占位文件并更新 GUID / 历史记录，
         /// 与生成完成回调 <see cref="OnAssetSaved"/> 保持一致，避免同基名下残留 .jpg 与 .png 两个文件。
         /// </summary>
@@ -851,13 +716,13 @@ namespace TJGenerators
                 sourceAssetPath,
                 okLogVerb,
                 LogTag,
-                ref targetImageAsset,
+                ref _targetAsset,
                 ref imagePreviewTexture,
                 historyPreviewCache,
                 ext =>
                 {
                     EnsureTargetImage(ext);
-                    return targetImageAsset;
+                    return _targetAsset;
                 },
                 TargetImageReplaceHelper.ConfigureDefaultTexture,
                 OnTargetImageExtensionChanged,
@@ -868,38 +733,21 @@ namespace TJGenerators
         private void OnTargetImageExtensionChanged(string oldTargetGuid, string newTargetPath)
         {
             if (!string.IsNullOrEmpty(oldTargetGuid))
-                imageOpenWindows.Remove(oldTargetGuid);
+                s_openWindows.Remove(oldTargetGuid);
 
             titleContent = new GUIContent(
                 string.Format(TJGeneratorsL10n.L("TJGenerators 图片 - {0}"), Path.GetFileNameWithoutExtension(newTargetPath)));
 
-            string newGuid = targetImageAsset.guid;
+            string newGuid = _targetAsset.guid;
             if (!string.IsNullOrEmpty(newGuid))
             {
-                imageOpenWindows[newGuid] = this;
+                s_openWindows[newGuid] = this;
                 TJGeneratorsHistoryManager.RewriteAssetGuid(oldTargetGuid, newGuid);
             }
         }
 
-        private void ShowHistoryInProject(int index)
-        {
-            if (index < 0 || index >= generationHistory.Count)
-                return;
-
-            var item = generationHistory[index];
-            if (string.IsNullOrEmpty(item.modelPath))
-                return;
-
-            var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(item.modelPath);
-            if (asset != null)
-            {
-                EditorGUIUtility.PingObject(asset);
-                Selection.activeObject = asset;
-            }
-        }
-
         // ========== 生成 ==========
-        private void StartGeneration()
+        protected override void OnStartGeneration()
         {
             if (string.IsNullOrWhiteSpace(textPrompt))
             {
@@ -908,6 +756,15 @@ namespace TJGenerators
             }
 
             bool hasImage = referenceImagePaths.Count > 0;
+            var layout = GetCurrentGeneratorConfig()?.uiLayout;
+            if (layout != null && layout.imageUploadRequired && !hasImage)
+            {
+                ErrorDialogUtils.ShowErrorDialog(
+                    TJGeneratorsL10n.L("错误"),
+                    TJGeneratorsL10n.L("请上传输入图片。"),
+                    LogTag);
+                return;
+            }
 
             if (_currentGenerator == null)
             {
@@ -917,13 +774,17 @@ namespace TJGenerators
 
             EnsureTargetImage();
 
-            isGenerating = true;
-            generationStatus = TJGeneratorsL10n.L("准备中...");
-            generationProgress = 0f;
+            MarkGenerationStarted();
 
             if (_currentGenerator is DynamicGenerator dynamicGen)
             {
-                dynamicGen.SetParameter("isSegmentation", false);
+                string fmt = dynamicGen.GetParameter("outputFormat")?.ToString() ?? "";
+                if (string.Equals(fmt, "jpeg", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(fmt, "jpg", StringComparison.OrdinalIgnoreCase))
+                    dynamicGen.SetParameter("isSegmentation", false);
+                else if (string.Equals(fmt, "png", StringComparison.OrdinalIgnoreCase))
+                    dynamicGen.SetParameter("isSegmentation", true);
+
                 dynamicGen.ClearExtraRawJsonFields();
 
                 string finalPrompt = textPrompt.Trim();
@@ -933,54 +794,20 @@ namespace TJGenerators
                 dynamicGen.SetImagePaths(hasImage ? referenceImagePaths : null);
             }
 
-            string assetGuid = targetImageAsset?.guid ?? "";
-            EditorCoroutineUtility.StartCoroutineOwnerless(
-                _pipeline.StartGeneration(_currentGenerator, assetGuid)
-            );
+            StartPipelineForCurrentGenerator();
         }
 
-        // ========== IGenerationPipelineHost ==========
-        public TJGeneratorsAssetReference GetTargetAsset() => targetImageAsset;
-
-        public void StartGeneration(ModelGeneratorBase generator)
+        public override string GetAssetSavePath(PipelineMediaType type, ModelGeneratorBase generator)
         {
-            if (generator == _currentGenerator)
-                StartGeneration();
+            if (type != PipelineMediaType.Texture) return null;
+            // 图片分层类 generator 输出多张 RGBA PNG；其余模型仍按 jpeg 占位，pipeline 会按实际格式迁移扩展名
+            bool isLayering = generator != null && IsLayeringGenerator(generator.GeneratorId);
+            return BuildHistoryTexturePath(isLayering ? "ImageLayers_" : "Image_", isLayering ? ".png" : ".jpg");
         }
 
-
-        public void OnGenerationCompleted(string assetPath)
+        public override void OnAssetSaved(PipelineMediaType type, string savePath, ModelGeneratorBase generator)
         {
-            if (generationHistory != null && !string.IsNullOrEmpty(assetPath))
-            {
-                int index = generationHistory.FindIndex(x => x.imagePath == assetPath || x.modelPath == assetPath);
-                if (index >= 0)
-                {
-                    selectedHistoryIndex = index;
-                }
-            }
-            // 图片窗口不需要 3D/Prefab 预览
-        }
-
-        public string GetAssetSavePath(PipelineMediaType _type, ModelGeneratorBase generator)
-        {
-            if (_type != PipelineMediaType.Texture) return null;
-
-            if (!AssetDatabase.IsValidFolder("Assets/TJGenerators"))
-                AssetDatabase.CreateFolder("Assets", "TJGenerators");
-            if (!AssetDatabase.IsValidFolder("Assets/TJGenerators/History"))
-                AssetDatabase.CreateFolder("Assets/TJGenerators", "History");
-
-            // 先用 .jpg 占位符路径（主图 savePath 会保留这个扩展名）
-            string uniqueName = "Image_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".jpg";
-            return AssetDatabase.GenerateUniqueAssetPath(
-                "Assets/TJGenerators/History/" + uniqueName
-            );
-        }
-
-        public void OnAssetSaved(PipelineMediaType _type, string savePath, ModelGeneratorBase generator)
-        {
-            if (_type != PipelineMediaType.Texture) return;
+            if (type != PipelineMediaType.Texture) return;
 
             // 地形高度图后处理改为「一键生成地形」时执行，此处仅保留后端原图
 
@@ -994,10 +821,43 @@ namespace TJGenerators
             if (!ReplaceTargetImageFromSource(savePath, TJGeneratorsL10n.L("已生成图片并复制到"), out string replaceErr))
                 TJLog.LogWarning($"{LogTag} 同步目标图片失败: {replaceErr}");
 
-            // 更新生成状态（历史刷新由 GenerationPipeline 在 CompletePlaceholder 后统一处理）
-            generationStatus = TJGeneratorsL10n.L("完成");
-            generationProgress = 1f;
-            isGenerating = false;
+            // 多图层时其余图仍在下载；完成态挪到 OnGenerationCompleted
+        }
+
+        public override void OnGenerationCompleted(string assetPath)
+        {
+            base.OnGenerationCompleted(assetPath);
+
+            // 图片分层：配置其余层 RGBA/标签（第 0 层已在 OnAssetSaved 处理）
+            bool isLayering = _currentGenerator != null && IsLayeringGenerator(_currentGenerator.GeneratorId);
+            if (isLayering && !string.IsNullOrEmpty(assetPath))
+            {
+                int expected = 4;
+                if (_currentGenerator is DynamicGenerator dg
+                    && dg.GetParameter("numLayers") != null
+                    && int.TryParse(dg.GetParameter("numLayers").ToString(), out int parsed)
+                    && parsed > 0)
+                {
+                    expected = parsed;
+                }
+                else if (_currentGenerator != null && IsSeedreamLayeringGenerator(_currentGenerator.GeneratorId))
+                {
+                    // Seedream 自动分层：底图 + 最多 16 层，无 numLayers 参数；
+                    // 给上限 17，CollectIndexedSiblingPaths 遇到缺口会自动停止
+                    expected = 17;
+                }
+
+                var layerPaths = GeneratedTextureImportUtils.CollectIndexedSiblingPaths(assetPath, expected);
+                for (int i = 1; i < layerPaths.Count; i++)
+                {
+                    string path = layerPaths[i];
+                    GeneratedTextureImportUtils.ConfigureImportedTexture(
+                        path, TextureImporterType.Default, alphaIsTransparency: true);
+                    TJGeneratorsGenerationLabel.EnableLabel(TJGeneratorsAssetReference.FromPath(path));
+                }
+            }
+
+            MarkGenerationCompleted();
         }
 
         /// <summary>
@@ -1070,33 +930,10 @@ namespace TJGenerators
         }
 
         // ========== 辅助方法 ==========
-        private string GetCurrentImageAssetGuid() => targetImageAsset?.guid ?? "";
-
-        private void OnModelSelected(AIModelInfo model) => OnModelSelectedBase(model);
-
-        protected override void ResetInputStateAfterModelChange()
-        {
-            var config = GetCurrentGeneratorConfig();
-            ResetTextPromptIfHidden(config, ref textPrompt);
-            ClearReferenceImagesWhenUploadHidden(config, referenceImagePaths, referenceUploadedImages);
-        }
-
-        protected override void OnModelSelectedBase(AIModelInfo model)
-        {
-            base.OnModelSelectedBase(model);
-            selectedPromptTemplate = null;
-            if (_currentGenerator is DynamicGenerator dg)
-                dg.SetPromptTemplateSelection(null);
-            UploadImageComponents.TrimReferenceImagesToMax(
-                referenceImagePaths,
-                referenceUploadedImages,
-                GetMaxReferenceImages());
-        }
-
         private void EnsureTargetImage()
         {
             // 初始化阶段：只在未绑定/无效时创建占位图，不强制改动用户已绑定的扩展名。
-            if (targetImageAsset != null && targetImageAsset.IsValid())
+            if (_targetAsset != null && _targetAsset.IsValid())
                 return;
 
             EnsureTargetImage(".jpg");
@@ -1111,7 +948,7 @@ namespace TJGenerators
 
             // 目标已有效时直接使用（无论扩展名是否与 desiredExt 一致）；
             // 后续 ReplaceTargetImageFromSource 会在保存实际结果时处理扩展名变化。
-            if (targetImageAsset != null && targetImageAsset.IsValid())
+            if (_targetAsset != null && _targetAsset.IsValid())
                 return;
 
             string folder = PathUtils.GetProjectBrowserInsertionFolderAssetPath();
@@ -1127,13 +964,12 @@ namespace TJGenerators
                 return;
             }
 
-            targetImageAsset = TJGeneratorsAssetReference.FromPath(path);
+            _targetAsset = TJGeneratorsAssetReference.FromPath(path);
             titleContent = new GUIContent(
                 string.Format(TJGeneratorsL10n.L("TJGenerators 图片 - {0}"), Path.GetFileNameWithoutExtension(path))
             );
 
-            if (!string.IsNullOrEmpty(targetImageAsset.guid))
-                imageOpenWindows[targetImageAsset.guid] = this;
+            RegisterInOpenWindows();
 
             Repaint();
         }

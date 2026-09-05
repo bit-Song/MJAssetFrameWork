@@ -27,5 +27,7 @@ namespace TJGenerators.Config
         public int maxReferenceImages = 0;
         /// <summary>多视图模式最少需要上传的图片数</summary>
         public int multiViewMinRequired = 2;
+        /// <summary>true 时图片上传为必填项，CanStartGeneration 检查非空</summary>
+        public bool imageUploadRequired = false;
     }
 }

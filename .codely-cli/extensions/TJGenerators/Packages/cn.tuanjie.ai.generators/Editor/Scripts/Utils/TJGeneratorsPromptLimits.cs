@@ -24,12 +24,13 @@ namespace TJGenerators.Utils
                 case "tencent-generation":   return 1000;
                 case "rodin":                return 1000;
                 case "tripo-p1":             return 1024;
-                case "meshy-animation":      return 600;
                 case "huoshan_seedream":           return 1024;
                 case "huoshan_seedream_image":     return 1024;
                 case "huoshan_seedream_pro":       return 1024;
                 case "huoshan_seedream_pro_image": return 1024;
                 case "huoshan_seedream_material":  return 1024;
+                case "image-layering":             return 1024;
+                case "seedream-image-layering":    return 1024;
                 default:                     return 0;
             }
         }

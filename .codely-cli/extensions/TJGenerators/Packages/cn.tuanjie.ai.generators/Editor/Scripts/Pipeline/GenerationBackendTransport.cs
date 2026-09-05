@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 using TJGenerators;
+using TJGenerators.AssetSearch;
 using TJGenerators.Generators;
 using TJGenerators.Utils;
 using Unity.UniAsset.Manager.Editor.InternalBridge;
@@ -311,8 +312,15 @@ namespace TJGenerators.Pipeline
             }
             if (string.IsNullOrEmpty(token))
             {
-                onError?.Invoke(TJGeneratorsL10n.L("认证token为空，请确保已登录Unity"));
-                yield break;
+                try
+                {
+                    token = CodelyTokenProvider.GetToken();
+                }
+                catch (Exception reAuthEx)
+                {
+                    onError?.Invoke(string.Format(TJGeneratorsL10n.L("获取认证token失败: {0}"), reAuthEx.Message));
+                    yield break;
+                }
             }
 
             UnityWebRequest uwr = UnityWebRequest.Get(url);

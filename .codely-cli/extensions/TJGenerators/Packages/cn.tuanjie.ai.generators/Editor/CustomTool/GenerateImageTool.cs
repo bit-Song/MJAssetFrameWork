@@ -327,12 +327,13 @@ namespace UnityTcp.Editor.Tools
             "Key parameters: generator_id (default 'frontier-game-design'; or 'huoshan_seedream_image', 'frontier-effect'), " +
             "prompt (text description), image_path (optional reference image — omit for text-to-image), " +
             "size (output resolution, e.g. '2048x2048', huoshan_seedream_image only), " +
-            "is_segmentation (bool, auto-remove background, default false, huoshan_seedream_image only), " +
+            "is_segmentation (bool, auto-remove background; if explicitly set, its value is used as-is; " +
+            "if omitted, defaults to true for png and false for jpeg), " +
             "resolution (frontier-effect only, '0.5K'/'1K'/'2K'/'4K', default '1K'), " +
             "aspect_ratio (frontier-effect only, 'auto'/'16:9'/'9:16'/'1:1'/'4:3'/'3:4'/'3:2'/'2:3'/'5:4'/'4:5'/'21:9', default 'auto'), " +
-            "output_format (frontier-effect only, 'png'/'jpeg', default 'png'), " +
+            "output_format (frontier-effect only, 'png'/'jpeg', default 'jpeg'), " +
             "imageSize (frontier-game-design only, 'square_hd'/'square'/'portrait_4_3'/'portrait_16_9'/'landscape_4_3'/'landscape_16_9', default 'square_hd'), " +
-            "outputFormat (frontier-game-design only, 'png'/'jpeg', default 'png'), " +
+            "outputFormat (frontier-game-design only, 'png'/'jpeg', default 'jpeg'; png enables isSegmentation, jpeg disables it), " +
             "prompt_template (frontier-game-design only, 'game_icon'/'concept_art', optional prompt prefix), " +
             "output_path (optional save path). " +
             "IMPORTANT: Generation takes 30-90 seconds. Wait at least 5 seconds before the first " +
@@ -1932,6 +1933,21 @@ namespace UnityTcp.Editor.Tools
 
             if (parameters["quality"] != null)
                 generator.SetParameter("quality", parameters["quality"].ToString());
+
+            // Only derive isSegmentation from outputFormat when the caller did not explicitly pass it.
+            // Previously this override ran unconditionally, clobbering is_segmentation=false for opaque PNGs.
+            if (parameters["is_segmentation"] == null)
+            {
+                string fmt = generator.GetParameter("outputFormat")?.ToString()
+                          ?? parameters["outputFormat"]?.ToString()
+                          ?? parameters["output_format"]?.ToString()
+                          ?? "";
+                if (string.Equals(fmt, "jpeg", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(fmt, "jpg", StringComparison.OrdinalIgnoreCase))
+                    generator.SetParameter("isSegmentation", false);
+                else if (string.Equals(fmt, "png", StringComparison.OrdinalIgnoreCase))
+                    generator.SetParameter("isSegmentation", true);
+            }
         }
 
         private static int GetImagePromptMaxLength(string generatorId)

@@ -60,4 +60,4 @@ allowed_skills = [
 ]
 
 [validation]
-input_schema = { task = "string", prompt = "string?", image_path = "string?", multiview_image_paths = "string[]?", prefab_output_path = "string?", generator = "string?", tier = "string?", quality = "string?", material = "string?", mesh_mode = "string?", ta_pose = "boolean?", geometry_format = "string?", face_limit = "integer?", pbr = "boolean?", texture = "boolean?", result_format = "string?", context = "string?", constraints = "string?" }
+input_schema = { task = "string", prompt = "string?", image_path = "string?", multiview_image_paths = "string[]?", prefab_output_path = "string?", generator = "string?", tier = "string?", quality = "string?", material = "string?", mesh_mode = "string?", ta_pose = "boolean?", geometry_format = "string?", face_limit = "integer?", pbr = "boolean?", texture = "boolean?", result_format = "string?", add_motion = "boolean?", motion_description = "string?", context = "string?", constraints = "string?" }

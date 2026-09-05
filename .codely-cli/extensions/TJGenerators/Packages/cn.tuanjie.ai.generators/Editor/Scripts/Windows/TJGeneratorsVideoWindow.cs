@@ -320,7 +320,7 @@ namespace TJGenerators
                 var modeParam = dynamicGen.GetParameter("mode");
                 if (modeParam != null) return modeParam.ToString();
             }
-            return "reference_image";
+            return null;
         }
 
         private void HandleVideoDragAndDrop(Rect dropRect)
@@ -840,10 +840,12 @@ namespace TJGenerators
                 dynamicGen.SetTextPrompt(promptToSend);
                 dynamicGen.SetImagePaths(hasImage ? referenceImagePaths : null);
 
-                // Determine mode based on inputs and dropdown
-                string mode = GetCurrentModeValue();
+                // Determine mode based on inputs and dropdown (reference image is optional)
+                string selectedMode = GetCurrentModeValue();
+                bool hasReferenceVideo = !string.IsNullOrEmpty(referenceVideoPath);
+                string mode = VideoModeResolver.Resolve(selectedMode, hasImage, hasReferenceVideo);
 
-                // Validate image requirements for image-dependent modes
+                // Validate image requirements for image-dependent modes (after soft fallbacks)
                 if (mode == "first_frame" && referenceImagePaths.Count < 1)
                 {
                     ErrorDialogUtils.ShowErrorDialog(
@@ -860,16 +862,8 @@ namespace TJGenerators
                         LogTag);
                     return;
                 }
-                if (mode == "reference_image" && !hasImage)
-                {
-                    ErrorDialogUtils.ShowErrorDialog(
-                        TJGeneratorsL10n.L("错误"),
-                        TJGeneratorsL10n.L("图生视频需要上传参考图片。"),
-                        LogTag);
-                    return;
-                }
 
-                if (mode == "multimodal" && !string.IsNullOrEmpty(referenceVideoPath))
+                if (mode == "multimodal")
                 {
                     // Upload video to TOS
                     string absVideoPath = PathUtils.ToAbsoluteAssetPath(referenceVideoPath);
@@ -894,11 +888,6 @@ namespace TJGenerators
 
                     dynamicGen.SetExtraRawJsonField("videos", "[" + JsonConvert.SerializeObject(videoTosUrl) + "]");
                     dynamicGen.SetParameter("mode", "multimodal");
-                }
-                else if (mode == "multimodal")
-                {
-                    // No video uploaded — fall back to reference_image
-                    dynamicGen.SetParameter("mode", hasImage ? "reference_image" : "text_to_video");
                 }
                 else
                 {

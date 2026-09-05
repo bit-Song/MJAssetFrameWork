@@ -159,7 +159,7 @@ namespace TJGenerators
                     EditorGUIUtility.PingObject(loadedMaterial);
                 }
 
-                EditorApplication.delayCall += () => TJGeneratorsSpriteWindow.OpenForMaterialAsset(path);
+                EditorApplication.delayCall += () => TJGeneratorsMaterialWindow.OpenForMaterialAsset(path);
             };
 
             StartNameEditingIfProjectWindowExists(doCreate, defaultName, icon, null);

@@ -137,14 +137,7 @@ namespace TJGenerators
         // 混元3.1（tencent-generation）
         public TencentResultFile3D[] resultFiles;
 
-        // Meshy 动画模型字段（新结构）
-        public MeshyAnimationResult animation_result;
-        public MeshyRigResult rig_result;
-        public MeshyModelUrls model_urls;  // Meshy 图生3D/文生3D 返回的模型URL
-        public MeshyModelUrls preview_model_urls;
-        public MeshyModelUrls refine_model_urls;
-        public MeshyTextureUrl[] texture_urls;  // Meshy 贴图URL数组
-        public string thumbnail_url;  // Meshy 缩略图URL
+        public string thumbnail_url;
         public string preview_url;
         public int seed;
     }
@@ -155,62 +148,6 @@ namespace TJGenerators
         public string type; // FBX / OBJ / STL ...
         public string url;
         public string previewImageUrl;
-    }
-
-    /// <summary>
-    /// Meshy 动画结果
-    /// </summary>
-    [Serializable]
-    public class MeshyAnimationResult
-    {
-        public string animation_fbx_url;
-        public string animation_glb_url;
-    }
-
-    /// <summary>
-    /// Meshy 绑骨结果
-    /// </summary>
-    [Serializable]
-    public class MeshyRigResult
-    {
-        public MeshyBasicAnimations basic_animations;
-        public string rigged_character_fbx_url;
-        public string rigged_character_glb_url;
-    }
-
-    /// <summary>
-    /// Meshy 模型URL结构
-    /// </summary>
-    [Serializable]
-    public class MeshyModelUrls
-    {
-        public string glb;
-        public string fbx;
-        public string obj;
-        public string mtl;
-    }
-
-    /// <summary>
-    /// Meshy 贴图URL结构
-    /// </summary>
-    [Serializable]
-    public class MeshyTextureUrl
-    {
-        public string base_color;
-    }
-
-    /// <summary>
-    /// Meshy 基础动画URL结构
-    /// </summary>
-    [Serializable]
-    public class MeshyBasicAnimations
-    {
-        public string walking_glb_url;
-        public string walking_fbx_url;
-        public string running_glb_url;
-        public string running_fbx_url;
-        public string walking_armature_glb_url;
-        public string running_armature_glb_url;
     }
 }
 #endif

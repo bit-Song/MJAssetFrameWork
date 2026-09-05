@@ -122,27 +122,6 @@ namespace TJGenerators.Generators
         public virtual string GetRenderedImageUrl(TJTaskStatusResponse response) => null;
         
         /// <summary>
-        /// 从任务状态响应中提取动画模型URL（用于带动画的模型）
-        /// </summary>
-        /// <param name="response">任务状态响应</param>
-        /// <returns>动画模型URL，如果没有则返回null</returns>
-        public virtual string GetAnimationUrl(TJTaskStatusResponse response) => null;
-        
-        /// <summary>
-        /// 从任务状态响应中提取行走动画URL
-        /// </summary>
-        /// <param name="response">任务状态响应</param>
-        /// <returns>行走动画URL，如果没有则返回null</returns>
-        public virtual string GetWalkingAnimationUrl(TJTaskStatusResponse response) => null;
-        
-        /// <summary>
-        /// 从任务状态响应中提取奔跑动画URL
-        /// </summary>
-        /// <param name="response">任务状态响应</param>
-        /// <returns>奔跑动画URL，如果没有则返回null</returns>
-        public virtual string GetRunningAnimationUrl(TJTaskStatusResponse response) => null;
-        
-        /// <summary>
         /// 获取生成的模型文件名
         /// </summary>
         /// <returns>文件名（包含扩展名）</returns>

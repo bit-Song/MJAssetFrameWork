@@ -31,12 +31,15 @@ generator_id: `rodin`
 | `prefab_output_path` | string | 否 | 自动生成 | 输出 prefab 路径（`.prefab` 自动添加） |
 | `force_overwrite` | bool | 否 | false | 覆盖同路径已有 prefab |
 | `tier` | string | 否 | `Gen-2.5-Extreme-High` | 模型层级（见下表） |
-| `quality` | string | 否 | `medium` | 质量等级：`extra-low`/`low`/`medium`/`high` |
+| `quality` | string | 否 | `medium` | 质量等级（面数预设，Raw 档映射 high=100万/medium=50万/low=6万/extra-low=2万）：`extra-low`/`low`/`medium`/`high` |
+| `quality_override` | int | 否 | 不设置 | 自定义目标面数（500–2000000），**优先于 `quality`**；Quad 模式上限 200000，非 High 档 tier 上限 1000000。低档位 tier 未传时后端自动封顶（Extreme-Low→20000、Low→60000） |
 | `material` | string | 否 | `PBR` | 材质类型：`PBR`/`Shaded` |
 | `mesh_mode` | string | 否 | `Quad` | 网格模式：`Quad`（四边形）/`Raw`（三角形） |
-| `ta_pose` | bool | 否 | false | 生成 T/A 姿势的模型 |
+| `ta_pose` | bool | 否 | false | 生成 T/A 姿势的模型。**`add_motion` 时建议 true** |
 | `geometry_format` | string | 否 | `fbx` | 输出格式 |
 | `session_id` | string | 否 | — | 为占位符 prefab 添加 Session 标签 |
+| `add_motion` | bool | 否 | false | 与 UI「添加动作」相同：主模型落地后自动 UniRig + HunyuanMotion |
+| `motion_description` | string | `add_motion` 时必填 | — | 英文动作描述，例如 `a walking cycle` |
 
 **tier 选项：**
 
@@ -146,14 +149,16 @@ generator_id: `rodin`
 
 ---
 
-## quality 参考值
+## quality 参考值（面数预设）
+
+`quality` 控制的是目标面数（不是 tier）。Gen-2.5 `Raw` 档映射：`high`=100万 / `medium`=50万（默认）/ `low`=6万 / `extra-low`=2万；`Quad` 档：`high`=5万 / `medium`=1.8万 / `low`=8000 / `extra-low`=4000。需要精确面数时用 `quality_override` 直接指定。
 
 | 值 | 描述 |
 |----|------|
-| `extra-low` | 超低质量（最快） |
-| `low` | 低质量 |
-| `medium` | 中等（默认，平衡） |
-| `high` | 高质量（更精细纹理） |
+| `extra-low` | 超低面数（最快） |
+| `low` | 低面数 |
+| `medium` | 中等（默认，Raw 档=50万面） |
+| `high` | 高面数 |
 
 ---
 

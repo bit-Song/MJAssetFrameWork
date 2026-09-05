@@ -143,9 +143,11 @@ namespace TJGenerators.Generators
             {
                 _imagePaths.Clear();
                 _imagePath = "";
-                _uploadedImage = null;
+                DestroyUploadedImage();
                 return;
             }
+
+            DestroyUploadedImage();
             _imagePaths = new List<string>(paths.Count);
             for (int i = 0; i < paths.Count; i++)
             {
@@ -164,7 +166,7 @@ namespace TJGenerators.Generators
             }
             else
             {
-                _uploadedImage = null;
+                DestroyUploadedImage();
             }
         }
 
@@ -201,6 +203,7 @@ namespace TJGenerators.Generators
             if (paths == null || paths.Length == 0)
                 return;
 
+            DestroyMultiViewImages();
             _multiViewPaths = new List<string>(new string[4]);
             _multiViewImages = new List<Texture2D>(new Texture2D[4]);
             _multiViewCount = 4;
@@ -813,11 +816,17 @@ namespace TJGenerators.Generators
 
         private void EnsureMultiViewInit()
         {
-            if (_multiViewPaths.Count < 4)
-            {
-                _multiViewPaths = new List<string>(new string[4]);
-                _multiViewImages = new List<Texture2D>(new Texture2D[4]);
-            }
+            if (_multiViewPaths == null)
+                _multiViewPaths = new List<string>();
+            if (_multiViewImages == null)
+                _multiViewImages = new List<Texture2D>();
+
+            // Pad to four slots without discarding partial uploads (Count 1–3 must be preserved).
+            while (_multiViewPaths.Count < 4)
+                _multiViewPaths.Add(null);
+            while (_multiViewImages.Count < 4)
+                _multiViewImages.Add(null);
+
             _multiViewCount = 4;
             _multiViewMinRequired = GetMultiViewMinRequired();
         }
@@ -1241,6 +1250,27 @@ namespace TJGenerators.Generators
 
         #region 端点与输入模式
 
+        private static void DestroyTextureIfNeeded(Texture2D texture)
+        {
+            if (texture != null)
+                UnityEngine.Object.DestroyImmediate(texture);
+        }
+
+        private void DestroyUploadedImage()
+        {
+            DestroyTextureIfNeeded(_uploadedImage);
+            _uploadedImage = null;
+        }
+
+        private void DestroyMultiViewImages()
+        {
+            if (_multiViewImages == null)
+                return;
+
+            for (int i = 0; i < _multiViewImages.Count; i++)
+                DestroyTextureIfNeeded(_multiViewImages[i]);
+        }
+
         private void UpdateEndpointForInputMode()
         {
             // Update endpoint key based on current input mode
@@ -1511,15 +1541,6 @@ namespace TJGenerators.Generators
         public override string GetRenderedImageUrl(TJTaskStatusResponse response) =>
             DynamicTaskResponseResolver.GetRenderedImageUrl(CreateResponseContext(), response);
 
-        public override string GetAnimationUrl(TJTaskStatusResponse response) =>
-            DynamicTaskResponseResolver.GetAnimationUrl(CreateResponseContext(), response);
-
-        public override string GetWalkingAnimationUrl(TJTaskStatusResponse response) =>
-            DynamicTaskResponseResolver.GetWalkingAnimationUrl(CreateResponseContext(), response);
-
-        public override string GetRunningAnimationUrl(TJTaskStatusResponse response) =>
-            DynamicTaskResponseResolver.GetRunningAnimationUrl(CreateResponseContext(), response);
-
         public override string GetModelFileName() =>
             DynamicTaskResponseResolver.GetModelFileName(CreateResponseContext());
 
@@ -1547,8 +1568,16 @@ namespace TJGenerators.Generators
             }
         }
 
-        public override bool GetAddMotionEnabled() =>
-            ShouldShowEnableMotionUi() && _addMotionEnabled;
+        /// <summary>
+        /// CustomTool / 任务恢复：打开与 UI「添加动作」相同的后处理（UniRig + HunyuanMotion）。
+        /// </summary>
+        public void SetAddMotion(bool enabled, string description = "")
+        {
+            _addMotionEnabled = enabled;
+            _motionDescription = description ?? "";
+        }
+
+        public override bool GetAddMotionEnabled() => _addMotionEnabled;
 
         public override string GetMotionDescription() => _motionDescription ?? "";
 
@@ -1593,6 +1622,16 @@ namespace TJGenerators.Generators
                     data.loop = loopParsed;
             }
 
+            if (GetParameter("numLayers") != null
+                && int.TryParse(GetParameter("numLayers").ToString(), out int numLayers)
+                && numLayers > 0)
+            {
+                data.numLayers = numLayers;
+            }
+
+            data.addMotion = _addMotionEnabled;
+            data.motionDescription = _motionDescription ?? "";
+
             return data;
         }
 
@@ -1615,6 +1654,12 @@ namespace TJGenerators.Generators
 
             if (taskData.loopSpecified)
                 SetParameter("loop", taskData.loop);
+
+            if (taskData.numLayers > 0)
+                SetParameter("numLayers", taskData.numLayers);
+
+            if (taskData.addMotion)
+                SetAddMotion(true, taskData.motionDescription);
         }
 
         #endregion

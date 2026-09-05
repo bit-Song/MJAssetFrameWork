@@ -730,8 +730,7 @@ namespace UnityTcp.Editor.Tools
                     generator.SetParameter("model", parameters["model"].ToString());
 
                 // Match Video window / tool docs: auto-detect when mode omitted.
-                // Config default is reference_image; text-only without override fails with
-                // "reference_image requires 1 to 9 images".
+                // Config default is text_to_video; still override when image/video inputs are present.
                 if (parameters["mode"] != null)
                 {
                     generator.SetParameter("mode", parameters["mode"].ToString());

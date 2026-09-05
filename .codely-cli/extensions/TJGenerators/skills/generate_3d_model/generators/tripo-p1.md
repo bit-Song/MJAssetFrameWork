@@ -43,6 +43,8 @@ generator_id: `tripo-p1`
 | `prefab_output_path` | string | 否 | 自动生成 | 输出 prefab 路径（`.prefab` 自动添加） |
 | `force_overwrite` | bool | 否 | false | 覆盖同名 prefab |
 | `session_id` | string | 否 | — | 为占位符 prefab 添加 Session 标签，用于 agent session 分组 |
+| `add_motion` | bool | 否 | false | 与 UI「添加动作」相同：主模型落地后自动 UniRig + HunyuanMotion |
+| `motion_description` | string | `add_motion` 时必填 | — | 英文动作描述，例如 `a walking cycle` |
 
 **⚠️ P1 约束（重要）：**
 

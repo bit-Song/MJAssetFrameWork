@@ -1,15 +1,16 @@
 using Cysharp.Threading.Tasks;
 using MJ.AssetFrameWork.ABFrame;
+using MJ.AssetFrameWork.ABFrame.Pool;
 using System.Collections;
-using System.Net;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace MJ.AssetFrameWork.ABFrame
 {
     public class Test : MonoBehaviour
     {
+        public Stack<GameObject> pool = new Stack<GameObject>();
+        public Stack<GameObject> pool2 = new Stack<GameObject>();
         private void Awake()
         {
             Debug.Log(Application.persistentDataPath);
@@ -17,38 +18,62 @@ namespace MJ.AssetFrameWork.ABFrame
         }
         private async void Start()
         {
-            //await HotUpdateManager.Instance.HotAndPackAssets(BundleModuleEnum.Hall);
-            ////等待资源热更完成后加载物体
-            //Debug.Log("开始加载");
-            //StartGame();
+            //await HotUpdateManager.Instance.HotAndPackAssets(BundleModuleEnum.Game);
+            //等待资源热更完成后加载物体
+            Debug.Log("开始加载");
 
-
-            try
-            {
-                FtpWebRequest request = (FtpWebRequest)WebRequest.Create($"ftp://127.0.0.1/HotAssets/1");
-                request.Credentials = new NetworkCredential(FtpConfig.Instance.userName, FtpConfig.Instance.password);
-                request.Method = WebRequestMethods.Ftp.MakeDirectory;
-                request.UseBinary = true;
-                request.KeepAlive = false;
-
-                using (FtpWebResponse response = (FtpWebResponse)request.GetResponse())
-                {
-                    // 目录创建成功
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.Log("失败" + e.Message);
-                throw;
-            }
+            await MJAssetsABFrame.HotAssets(BundleModuleEnum.Game, true);
+            await MJAssetsABFrame.HotAssets(BundleModuleEnum.Login, true);
+            StartGame();
         }
 
         public void StartGame()
         {
 
-            //MJAssetsABFrame.Instantiate(@"Assets/BundleDemo/Hall/Prefab/LoginWindow");
-            //MJAssetsABFrame.HotAssets(BundleModuleEnum.GameItem, true).Forget();
         }
 
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.A))
+            {
+                pool.Push(MJAssetsABFrame.Instantiate(AssetPath.Game.Prefab.Cube));
+            }
+           
+
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                MJAssetsABFrame.Release(pool.Pop(), false);
+            }
+            if (Input.GetKeyDown(KeyCode.D))
+            {
+                MJAssetsABFrame.Release(pool.Pop(), true);
+            }
+            
+
+
+            if (Input.GetKeyDown(KeyCode.Q))
+            {
+                pool2.Push(MJAssetsABFrame.Instantiate(AssetPath.Login.Prefab.Cube));
+            }
+            if (Input.GetKeyDown(KeyCode.W))
+            {
+                MJAssetsABFrame.Release(pool2.Pop(), true);
+            }
+
+
+
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                MJAssetsABFrame.ClearResoucesAssets(false);
+            }
+            if (Input.GetKeyDown(KeyCode.G))
+            {
+                MJAssetsABFrame.ClearResoucesAssets(true);
+            }
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                PoolManager.Instance.GetAllStats();
+            }
+        }
     }
 }

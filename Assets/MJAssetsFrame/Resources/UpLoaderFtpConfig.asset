@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   host: ftp://127.0.0.1/HotAssets
   port: 21
-  userName: 
-  password: 
+  userName: MrSong
+  password: 123456

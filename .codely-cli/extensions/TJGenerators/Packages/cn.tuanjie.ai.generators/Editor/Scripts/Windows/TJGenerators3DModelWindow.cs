@@ -933,13 +933,7 @@ namespace TJGenerators
                 case "rodin":                        return "rodin";
                 case "tencent-generation":           return "tencent-generation";
                 case "混元3.1":                       return "tencent-generation";
-                case "meshy-animation":              return "meshy-animation";
-                case "meshy-image-to-3d":            return "meshy-image-to-3d";
-                case "meshy-multi-image-to-3d":      return "meshy-multi-image-to-3d";
-                // 兼容可能的displayName变体
-                case "meshy 图生3d":                  return "meshy-image-to-3d";
-                case "meshy 动画模型":                  return "meshy-animation";
-                case "meshy 多图生3d":                  return "meshy-multi-image-to-3d";
+                case "tripo-p1-animation":           return "tripo-p1-animation";
                 default:                             return "tripo";  // 默认使用tripo配置
             }
         }

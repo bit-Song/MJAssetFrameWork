@@ -15,10 +15,5 @@ namespace TJGenerators.Config
         public string taskIdPath;
         public string progressPath;
         public string statusPath;
-
-        // 动画相关字段（用于Meshy动画模型）
-        public string animationUrlPath;  // 动画模型URL路径，如 "result.animation_fbx_url"
-        public string walkingAnimationUrlPath;  // 行走动画URL路径，如 "result.basic_animations.walking_fbx_url"
-        public string runningAnimationUrlPath;  // 奔跑动画URL路径，如 "result.basic_animations.running_fbx_url"
     }
 }

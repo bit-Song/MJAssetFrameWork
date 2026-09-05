@@ -37,43 +37,6 @@ namespace TJGenerators.Generators
     {
         #region Path helpers
 
-        /// <summary>从容器按顺序读取两个 URL 字段，返回第一个非空（典型：FBX 优先于 GLB）。</summary>
-        private static string PreferUrlKeys(
-            object container,
-            string primaryKey,
-            string fallbackKey
-        )
-        {
-            if (container == null)
-                return null;
-            string primary = PathUtils.GetUrlString(container, primaryKey);
-            if (!string.IsNullOrEmpty(primary))
-                return primary;
-            string fallback = PathUtils.GetUrlString(container, fallbackKey);
-            return string.IsNullOrEmpty(fallback) ? null : fallback;
-        }
-
-        /// <summary>Meshy：从 rig_result / steps.rig 的 basic_animations 解析成对动画 URL。</summary>
-        private static string GetMeshyBasicAnimationUrl(
-            object resultRoot,
-            string glbKey,
-            string fbxKey
-        )
-        {
-            if (resultRoot == null)
-                return null;
-            var rigResult = PathUtils.GetRaw(resultRoot, "rig_result");
-            string url = PreferUrlKeys(
-                PathUtils.GetRaw(rigResult, "basic_animations"),
-                glbKey,
-                fbxKey
-            );
-            if (!string.IsNullOrEmpty(url))
-                return url;
-            var stepsRig = PathUtils.GetRaw(resultRoot, "steps.rig");
-            return PreferUrlKeys(PathUtils.GetRaw(stepsRig, "basic_animations"), glbKey, fbxKey);
-        }
-
         #endregion
 
         #region Provider fallbacks
@@ -99,31 +62,6 @@ namespace TJGenerators.Generators
             if (!string.IsNullOrEmpty(url))
                 TJLog.Log("[DynamicGenerator] GetDownloadUrl: Rodin 使用 'base' 作为兜底");
             return string.IsNullOrEmpty(url) ? null : url;
-        }
-
-        private static string TryResolveMeshyModelUrl(object result)
-        {
-            if (result == null)
-                return null;
-
-            string url = PreferUrlKeys(PathUtils.GetRaw(result, "refine_model_urls"), "fbx", "glb");
-            if (!string.IsNullOrEmpty(url))
-                return url;
-
-            url = PreferUrlKeys(
-                PathUtils.GetRaw(result, "rig_result"),
-                "rigged_character_fbx_url",
-                "rigged_character_glb_url"
-            );
-            if (!string.IsNullOrEmpty(url))
-                return url;
-
-            url = PreferUrlKeys(PathUtils.GetRaw(result, "preview_model_urls"), "fbx", "glb");
-            if (!string.IsNullOrEmpty(url))
-                return url;
-
-            var stepsRefine = PathUtils.GetRaw(result, "steps.refine");
-            return PreferUrlKeys(PathUtils.GetRaw(stepsRefine, "model_urls"), "fbx", "glb");
         }
 
         private static bool IsImageDownloadPath(string path)
@@ -208,13 +146,6 @@ namespace TJGenerators.Generators
 
             if (string.IsNullOrEmpty(url))
                 url = TryResolveRodinDownloadUrl(ctx.Config, result);
-
-            if (string.IsNullOrEmpty(url))
-            {
-                url = TryResolveMeshyModelUrl(result);
-                if (!string.IsNullOrEmpty(url))
-                    TJLog.Log($"[DynamicGenerator] GetDownloadUrl: 使用 Meshy 动画模型 URL: {url}");
-            }
 
             if (string.IsNullOrEmpty(url))
             {
@@ -313,84 +244,6 @@ namespace TJGenerators.Generators
                 return null;
 
             return PathUtils.GetUrlString(response.output.data.result, path);
-        }
-
-        public static string GetAnimationUrl(
-            DynamicTaskResponseContext ctx,
-            TJTaskStatusResponse response
-        )
-        {
-            if (response?.output?.data?.result == null)
-                return null;
-
-            string path = ctx.Config.responseMapping?.animationUrlPath;
-            if (!string.IsNullOrEmpty(path))
-            {
-                string configUrl = PathUtils.GetUrlString(response.output.data.result, path);
-                if (!string.IsNullOrEmpty(configUrl))
-                    return configUrl;
-            }
-
-            object result = response.output.data.result;
-            string url = PreferUrlKeys(
-                PathUtils.GetRaw(result, "animation_result"),
-                "animation_fbx_url",
-                "animation_glb_url"
-            );
-            if (!string.IsNullOrEmpty(url))
-                return url;
-
-            return PreferUrlKeys(
-                PathUtils.GetRaw(result, "steps.animation"),
-                "animation_fbx_url",
-                "animation_glb_url"
-            );
-        }
-
-        public static string GetWalkingAnimationUrl(
-            DynamicTaskResponseContext ctx,
-            TJTaskStatusResponse response
-        )
-        {
-            if (response?.output?.data?.result == null)
-                return null;
-
-            string path = ctx.Config.responseMapping?.walkingAnimationUrlPath;
-            if (!string.IsNullOrEmpty(path))
-            {
-                string configUrl = PathUtils.GetUrlString(response.output.data.result, path);
-                if (!string.IsNullOrEmpty(configUrl))
-                    return configUrl;
-            }
-
-            return GetMeshyBasicAnimationUrl(
-                response.output.data.result,
-                "walking_fbx_url",
-                "walking_glb_url"
-            );
-        }
-
-        public static string GetRunningAnimationUrl(
-            DynamicTaskResponseContext ctx,
-            TJTaskStatusResponse response
-        )
-        {
-            if (response?.output?.data?.result == null)
-                return null;
-
-            string path = ctx.Config.responseMapping?.runningAnimationUrlPath;
-            if (!string.IsNullOrEmpty(path))
-            {
-                string configUrl = PathUtils.GetUrlString(response.output.data.result, path);
-                if (!string.IsNullOrEmpty(configUrl))
-                    return configUrl;
-            }
-
-            return GetMeshyBasicAnimationUrl(
-                response.output.data.result,
-                "running_fbx_url",
-                "running_glb_url"
-            );
         }
 
         public static string GetModelFileName(DynamicTaskResponseContext ctx)

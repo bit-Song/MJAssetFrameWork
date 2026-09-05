@@ -215,20 +215,83 @@ namespace TJGenerators
 
         #endregion
 
-        #region AI - Tools (3050 / 3150)
+        #region AI - Tools (3050–3100 / 3150–3200)
 
 #if TUANJIE_1 || TUANJIE_2 || TJGENERATORS_DEBUG
         [MenuItem("AI/工具/图片切割", false, 3050)]
         public static void OpenImageSliceWindow() { TJGeneratorsL10n.SetLanguage(TJGeneratorsL10n.Language.Chinese); TJGeneratorsImageSliceWindow.ShowWindow(); }
         [MenuItem("AI/工具/图片切割", true)]
         public static bool Validate_OpenImageSliceWindow() => true;
+
+        [MenuItem("AI/工具/清理占位 GameObject", false, 3100)]
+        public static void CleanAllPlaceholders()
+        {
+            TJGeneratorsL10n.SetLanguage(TJGeneratorsL10n.Language.Chinese);
+            CleanAllPlaceholdersInternal();
+        }
+        [MenuItem("AI/工具/清理占位 GameObject", true)]
+        public static bool Validate_CleanAllPlaceholders() => ValidateNotInPlayMode();
 #endif
 #if !(TUANJIE_1 || TUANJIE_2) || TJGENERATORS_DEBUG
         [MenuItem("AI/Tools/Image Slice", false, 3150)]
         public static void OpenImageSliceWindow_En() { TJGeneratorsL10n.SetLanguage(TJGeneratorsL10n.Language.English); TJGeneratorsImageSliceWindow.ShowWindow(); }
         [MenuItem("AI/Tools/Image Slice", true)]
         public static bool Validate_OpenImageSliceWindow_En() => true;
+
+        [MenuItem("AI/Tools/Clean Placeholder GameObjects", false, 3200)]
+        public static void CleanAllPlaceholders_En()
+        {
+            TJGeneratorsL10n.SetLanguage(TJGeneratorsL10n.Language.English);
+            CleanAllPlaceholdersInternal();
+        }
+        [MenuItem("AI/Tools/Clean Placeholder GameObjects", true)]
+        public static bool Validate_CleanAllPlaceholders_En() => ValidateNotInPlayMode();
 #endif
+
+        /// <summary>
+        /// 扫描项目内全部 Prefab，删除残留的名为 "Placeholder" 的子对象。
+        /// </summary>
+        static void CleanAllPlaceholdersInternal()
+        {
+            int cleaned = 0;
+            var guids = AssetDatabase.FindAssets("t:Prefab");
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.IsNullOrEmpty(path) || !path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                bool changed = false;
+                using (var scope = new PrefabContentsEditScope(path, saveOnDispose: false))
+                {
+                    var root = scope.prefabContentsRoot;
+                    if (root == null)
+                        continue;
+
+                    for (int i = root.transform.childCount - 1; i >= 0; i--)
+                    {
+                        var child = root.transform.GetChild(i).gameObject;
+                        if (child.name == "Placeholder")
+                        {
+                            UnityEngine.Object.DestroyImmediate(child);
+                            changed = true;
+                            cleaned++;
+                        }
+                    }
+
+                    if (changed)
+                        PrefabUtility.SaveAsPrefabAsset(root, path);
+                }
+            }
+
+            if (cleaned > 0)
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+
+            Debug.Log($"[TJGenerators] 清理完成，共移除 {cleaned} 个占位 GameObject。");
+        }
 
         #endregion
 

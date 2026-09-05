@@ -1,6 +1,6 @@
 {
-  "updateNotice": "输入本次热更描述...",
-  "downLoadUrl": "http://127.0.0.1/HotAssets/Game/6/StandaloneWindows",
+  "updateNotice": "输入本次热更描述...测试",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/Game/7/StandaloneWindows",
   "hotAssetsPatcheList": [
     {
       "patchVersion": 1,
@@ -74,6 +74,21 @@
           "abName": "game_cube.ab",
           "md5": "7173C2A3F9E7B6163AA2C7BBD0D1FEF4",
           "size": 45.90918
+        }
+      ]
+    },
+    {
+      "patchVersion": 7,
+      "hotAssetsList": [
+        {
+          "abName": "gamebundleconfig.ab",
+          "md5": "DD93F4BC9160D1D3FA0AF9EA7CC83A0B",
+          "size": 1.29296875
+        },
+        {
+          "abName": "game_cube.ab",
+          "md5": "88360A78F1EECA86F6C661E1EBF16B6B",
+          "size": 43.7568359
         }
       ]
     }

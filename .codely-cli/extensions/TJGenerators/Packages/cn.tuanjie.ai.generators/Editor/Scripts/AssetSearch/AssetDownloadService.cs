@@ -216,6 +216,10 @@ namespace TJGenerators.AssetSearch
                 request.PrefabMeta ?? "", request.Query ?? "", request.Score, request.Keywords ?? "",
                 request.PreviewUrl ?? "", request.Url ?? "");
 
+            // 后台落账：直连 Codely 的下载不经后台缓存，这里把资产元数据报到后台用于
+            // 首次扣费 + 任务记录 + 去重（best-effort，失败不阻断下载）。
+            var billing = AssetDownloadBilling.Record(request);
+
             AssetDownloadPipeline.StartDownload(
                 taskId, request.Url, request.PrefabPath, packageDir, tempPath,
                 request.SessionId ?? "", request.InstantiateInScene);
@@ -225,9 +229,12 @@ namespace TJGenerators.AssetSearch
 
             return new StartDownloadResult
             {
-                TaskId  = taskId,
-                Status  = DownloadTaskStatus.Downloading,
-                Message = "Download started. Poll GetTask(taskId) to track progress.",
+                TaskId          = taskId,
+                Status          = DownloadTaskStatus.Downloading,
+                Message         = "Download started. Poll GetTask(taskId) to track progress.",
+                IsFirstDownload = billing.IsFirstDownload,
+                CreditsCharged  = billing.CreditsCharged,
+                BillingError    = billing.HasError ? billing.Error : null,
             };
         }
 

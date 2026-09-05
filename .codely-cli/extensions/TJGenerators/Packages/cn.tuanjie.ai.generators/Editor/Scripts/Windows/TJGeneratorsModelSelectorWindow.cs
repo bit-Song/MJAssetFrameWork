@@ -49,7 +49,6 @@ namespace TJGenerators
                 // 你可以在这里对单个按钮精调，例如 new Vector2(+1f, 0f) 或 new Vector2(+2f, +1f)
                 // { "Tripo", new Vector2(-1f, 0f) },
                 // { "Tencent Hunyuan", new Vector2(1f, 0f) },
-                // { "Meshy", new Vector2(1f, 0f) },
                 // { "Rodin", new Vector2(1f, 0f) },
                 // { "UniRig", new Vector2(1f, 0f) },
             };

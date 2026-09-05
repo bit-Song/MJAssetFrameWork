@@ -41,7 +41,7 @@ Output: PNG imported as **TextureCube (Cubemap)** + 一个绑好 Cubemap 的 Sky
 不适用：
 - 3D 模型 → `generate_3d_model`
 - 2D 精灵 / 通用纹理 → `generate_sprite` / `generate_image`
-- 动画角色 → `generate_animated_character`
+- 动画角色 / 绑骨 / 动作 → `animated-character-generator`
 - 表面材质（PBR） → `generate_material`
 
 ## 工具

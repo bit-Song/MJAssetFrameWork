@@ -111,6 +111,10 @@ namespace TJGenerators.UI
         /// </summary>
         protected virtual void OnEnable()
         {
+            // Domain reload 会清空不可序列化的生成器实例；若仍标记就绪则强制重新初始化并恢复模型选择。
+            if (_windowContentReady && NeedsGeneratorRebootstrap())
+                _windowContentReady = false;
+
             if (!_windowContentReady)
                 BootstrapWindow();
             TJGeneratorsL10n.OnLanguageChanged += Repaint;
@@ -122,18 +126,50 @@ namespace TJGenerators.UI
         }
 
         // ========== 窗口内容延迟初始化 ==========
-        private bool _windowContentReady;
+        [NonSerialized] private bool _windowContentReady;
+        [NonSerialized] private int _bootstrapRetryCount;
+        private const int MaxBootstrapRetries = 5;
+
+        /// <summary>
+        /// Domain reload 后生成器列表或当前选择丢失时需要重新 Bootstrap。
+        /// </summary>
+        private bool NeedsGeneratorRebootstrap()
+        {
+            return _generators == null || _generators.Count == 0 || _currentGenerator == null;
+        }
 
         /// <summary>
         /// 在目标资产/模式确定后执行首次初始化。由 <see cref="OnEnable"/> 在首帧绘制前同步调用；
         /// OpenForAsset 须在 <see cref="EditorWindow.Show"/> 之前完成 setTarget，以便 Bootstrap 读到正确绑定。
         /// 对已就绪的窗口幂等（防止重复完整初始化）。
+        /// Domain reload 后 AssetDatabase 可能尚未就绪导致生成器列表为空，此时通过 delayCall 重试。
         /// </summary>
         protected void BootstrapWindow()
         {
             if (_windowContentReady)
                 return;
             OnBootstrapWindowContent();
+            if (_generators == null || _generators.Count == 0)
+            {
+                if (_bootstrapRetryCount < MaxBootstrapRetries)
+                {
+                    _bootstrapRetryCount++;
+                    _windowContentReady = false;
+                    EditorApplication.delayCall += () =>
+                    {
+                        BootstrapWindow();
+                        Repaint();
+                    };
+                    return;
+                }
+                TJLog.LogWarning($"{LogTag} 多次重试后仍未找到生成器配置，请检查 GeneratorConfig.json");
+            }
+            else if (_currentGenerator == null)
+            {
+                // 生成器已加载但当前模型丢失（domain reload），按偏好恢复选择。
+                SelectDefaultGeneratorFromPreference(WindowConfigType);
+            }
+            _bootstrapRetryCount = 0;
             _windowContentReady = true;
         }
 

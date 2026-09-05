@@ -1,6 +1,6 @@
 {
-  "updateNotice": "输入本次热更描述...",
-  "downLoadUrl": "http://127.0.0.1/HotAssets/Scene/8/StandaloneWindows",
+  "updateNotice": "输入本次热更描述...测试",
+  "downLoadUrl": "http://127.0.0.1/HotAssets/Scene/9/StandaloneWindows",
   "hotAssetsPatcheList": [
     {
       "patchVersion": 1,
@@ -74,6 +74,21 @@
           "abName": "scene_cube.ab",
           "md5": "8DFD9060D21A853D49D66A8B858FF6A0",
           "size": 45.9306641
+        }
+      ]
+    },
+    {
+      "patchVersion": 9,
+      "hotAssetsList": [
+        {
+          "abName": "scenebundleconfig.ab",
+          "md5": "3D64F043C8D4F96FD6C61AD1B4A6AB2E",
+          "size": 1.29101563
+        },
+        {
+          "abName": "scene_cube.ab",
+          "md5": "D84C4EFDE03D02FE4C35B02EA85AB872",
+          "size": 43.7822266
         }
       ]
     }

@@ -180,6 +180,7 @@ namespace TJGenerators.Utils
             _translations["在此处输入文本提示..."] = "Enter prompt here...";
             _translations["参考图片（可选）"] = "Ref Image (Opt.)";
             _translations["参考图片"] = "Ref Image";
+            _translations["输入图片（必填）"] = "Input Image (required)";
             _translations["高级设置"] = "Advanced";
             _translations["未知模型"] = "Unknown Model";
             _translations["选择图片"] = "Select Image";
@@ -399,6 +400,7 @@ namespace TJGenerators.Utils
             _translations["支持 FBX、OBJ 格式的 3D 模型文件"] = "Supports FBX, OBJ 3D model files";
             _translations["正面图片是必需的，且文件必须存在。"] = "Front image is required and must exist.";
             _translations["请上传多视图图片"] = "Please upload multi-view images";
+            _translations["请上传输入图片。"] = "Please upload an input image.";
             _translations["选择{0}图片"] = "Select {0} Image";
             _translations["至少需要{0}张图片进行多视图生成"] = "At least {0} images required for multi-view";
             _translations["多视图至少需要{0}张图片"] = "Multi-view needs at least {0} images";
@@ -622,6 +624,8 @@ namespace TJGenerators.Utils
             // ---- Sprite 窗口补充 ----
             _translations["请输入文本提示词，或选择纹理走势 / 上传材质模板图片"] = "Enter a prompt, or select a texture pattern / upload a material template image";
             _translations["请先选择模型，并输入文本提示词或选择纹理走势 / 上传材质模板图片。"] = "Please select a model and enter a prompt or select a texture pattern / upload a material template image.";
+            _translations["请先选择模型，并输入文本提示词或上传参考图片。"] = "Please select a model and enter a prompt or upload a reference image.";
+            _translations["选择参考图片"] = "Select Reference Image";
             _translations["未找到可用的 Material 生成器，请检查 GeneratorConfig.json 中的 materialGenerators"] = "No material generator found. Check materialGenerators in config.";
             _translations["未找到可用的 Sprite 生成器，请检查 GeneratorConfig.json 中的 spriteGenerators"] = "No sprite generator found. Check spriteGenerators in config.";
             _translations["纹理图片不存在"] = "Texture Image Not Found";
@@ -699,9 +703,6 @@ namespace TJGenerators.Utils
             _translations["提交动作生成..."] = "Submitting motion generation...";
             _translations["下载动作模型..."] = "Downloading motion model...";
             _translations["创建动画控制器..."] = "Creating animator...";
-            _translations["下载动画..."] = "Downloading animation...";
-            _translations["下载行走动画..."] = "Downloading walk anim...";
-            _translations["下载奔跑动画..."] = "Downloading run anim...";
             _translations["获取认证token失败: {0}"] = "Failed to get auth token: {0}";
             _translations["未登录，请通过Unity编辑器左上角或Unity Hub登录后重试"] = "Not signed in. Please sign in via the Editor or Hub.";
             _translations["认证失败，请重新登录Unity账号"] = "Auth failed. Please re-sign in to Unity.";
@@ -798,8 +799,6 @@ namespace TJGenerators.Utils
             _translations["A/T姿势"] = "A/T Pose";
             _translations["AI模型"] = "AI Model";
             _translations["CFG强度"] = "CFG Strength";
-            _translations["meshy-5 (稳定)"] = "meshy-5 (Stable)";
-            _translations["meshy-6 (最新)"] = "meshy-6 (Latest)";
             _translations["Normal（带纹理几何模型）"] = "Normal (Textured Geometry)";
             _translations["P1 建议范围：48~20000"] = "P1 recommended: 48~20000";
             _translations["P1 支持：geometry。空表示默认(meshopt)。"] = "P1 supports: geometry. Empty = default (meshopt).";
@@ -875,7 +874,7 @@ namespace TJGenerators.Utils
             _translations["生成宽高比（auto 或指定比例）"] = "Aspect ratio (auto or specified)";
             _translations["生成任务类型：Normal可生成带纹理的几何模型"] = "Task type: Normal can generate textured geometry model";
             _translations["生成图片尺寸"] = "Image size";
-            _translations["生成图片格式（png/jpeg）"] = "Image format (png/jpeg)";
+            _translations["生成图片格式"] = "Image format";
             _translations["生成种子，0表示随机"] = "Seed, 0 = random";
             _translations["圣诞"] = "Christmas";
             _translations["时长(秒)"] = "Duration (s)";
@@ -889,6 +888,9 @@ namespace TJGenerators.Utils
             _translations["是否自动抠图去除背景"] = "Auto cutout (remove background)";
             _translations["受伤 (Hurt)"] = "Hurt";
             _translations["输出格式"] = "Output Format";
+            _translations["图层数量"] = "Layer Count";
+            _translations["生成的图层数量（1–8），默认 4"] = "Number of layers to generate (1–8), default 4";
+            _translations["图层文件格式"] = "Layer file format";
             _translations["输出中是否包含几何体"] = "Include geometry in output";
             _translations["四边网格"] = "Quad Mesh";
             _translations["四边形"] = "Quads";
@@ -912,7 +914,6 @@ namespace TJGenerators.Utils
             _translations["向后跑"] = "Run Backward";
             _translations["向前跑"] = "Run Forward";
             _translations["行走 (Walk)"] = "Walk";
-            _translations["选择动画动作，完整列表见 Editor/Config/MeshyAnimationIds.json"] = "Select animation action. See Editor/Config/MeshyAnimationIds.json";
             _translations["循环播放"] = "Loop";
             _translations["压缩质量"] = "Compress Quality";
             _translations["音效时长（秒）"] = "Audio Duration (s)";
@@ -952,9 +953,10 @@ namespace TJGenerators.Utils
             _translations["输入动作描述，如：walk、run、jump..."] = "Enter motion description, e.g.: walk, run, jump...";
             _translations["描述你想要生成的游戏图片..."] = "Describe the game image you want to generate...";
             _translations["描述你想要生成的图片..."] = "Describe the image you want to generate...";
+            _translations["描述图片内容，辅助图层分离..."] = "Describe the image to guide layer separation...";
             _translations["描述你想要生成的天空盒场景..."] = "Describe the skybox scene you want to generate...";
             _translations["描述你想要生成的游戏精灵图标..."] = "Describe the game sprite icon you want to generate...";
-            _translations["描述材质效果（与纹理走势二选一，或两者都填）..."] = "Describe material effect (either this or texture pattern, or both)...";
+            _translations["描述材质效果..."] = "Describe the material effect...";
             _translations["用英文描述你想要生成的音效，例如：雷声、爆炸、鸟鸣..."] = "Describe the sound effect in English, e.g.: thunder, explosion, birdsong...";
             _translations["输入要合成语音的文本内容..."] = "Enter text content for speech synthesis...";
             _translations["描述你想要生成的视频内容..."] = "Describe the video content you want to generate...";
@@ -1118,6 +1120,15 @@ namespace TJGenerators.Utils
             _translations["玩家角色头像"] = "Player Avatar";
             _translations["文生视频、图生视频"] = "Text-to-Video / Image-to-Video";
             _translations["文生图、图生图"] = "Text-to-Image / Image-to-Image";
+            _translations["图片分层"] = "Image Layering";
+            _translations["一张图片 → 多个独立 RGBA 图层"] = "One image → multiple independent RGBA layers";
+            _translations["Seedream 图片分层"] = "Seedream Image Layering";
+            _translations["一张图片 → 底图 + 最多 16 个透明图层（自动分层）"] = "One image → base + up to 16 transparent layers (auto)";
+            _translations["输入图片（必填，仅 1 张）"] = "Input Image (required, exactly 1)";
+            _translations["拆分提示词（可选）"] = "Split Prompt (optional)";
+            _translations["留空自动拆分全部主体；也可指定要拆分的元素..."] = "Leave empty to auto-split all main elements; or specify elements to split...";
+            _translations["分辨率档位"] = "Resolution Tier";
+            _translations["输出分辨率档位；auto 跟随输入图尺寸（1K/1.5K/2K）"] = "Output resolution tier; auto follows the input image size (1K/1.5K/2K)";
             _translations["文生音频、背景音乐"] = "Text-to-Audio / BGM";
             _translations["文生音效"] = "Text to SFX";
             _translations["文生语音、TTS"] = "Text-to-Speech / TTS";
@@ -1200,9 +1211,6 @@ namespace TJGenerators.Utils
 
             // ---- GeneratorConfig.json displayName 补充 ----
             _translations["混元3.1"] = "Hy 3.1";
-            _translations["Meshy 动画模型"] = "Meshy Animated Model";
-            _translations["Meshy 图生3D"] = "Meshy Image-to-3D";
-            _translations["Meshy 多图生3D"] = "Meshy Multi-Image-to-3D";
             _translations["混元Motion"] = "Hy Motion";
             _translations["UniRig 绑骨"] = "UniRig";
             _translations["（无提示词）"] = "(No Prompt)";

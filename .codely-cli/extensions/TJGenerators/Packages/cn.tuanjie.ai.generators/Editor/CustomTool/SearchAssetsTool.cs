@@ -225,18 +225,18 @@ namespace UnityTcp.Editor.Tools
                         {
                             tasks.Add(new Dictionary<string, object>
                             {
-                                { "success",     true },
-                                { "task_id",     result.TaskId },
-                                { "status",      "skipped" },
-                                { "asset_id",    assetId },
-                                { "name",        item.Name },
-                                { "prefab_path", result.PrefabPath ?? "" },
-                                { "message",     result.Message ?? "" }
+                                { "success",        true },
+                                { "task_id",        result.TaskId },
+                                { "status",         "skipped" },
+                                { "asset_id",       assetId },
+                                { "name",           item.Name },
+                                { "prefab_path",    result.PrefabPath ?? "" },
+                                { "message",        result.Message ?? "" }
                             });
                         }
                         else
                         {
-                            tasks.Add(new Dictionary<string, object>
+                            var entry = new Dictionary<string, object>
                             {
                                 { "success",           true },
                                 { "task_id",           result.TaskId },
@@ -244,7 +244,14 @@ namespace UnityTcp.Editor.Tools
                                 { "notification_mode", "bg_task_done" },
                                 { "asset_id",          assetId },
                                 { "name",              item.Name }
-                            });
+                            };
+                            if (result.IsFirstDownload)
+                                entry["is_first_download"] = true;
+                            if (result.CreditsCharged > 0)
+                                entry["credits_charged"] = result.CreditsCharged;
+                            if (!string.IsNullOrEmpty(result.BillingError))
+                                entry["billing_error"] = result.BillingError;
+                            tasks.Add(entry);
                         }
                     }
                     catch (Exception e)

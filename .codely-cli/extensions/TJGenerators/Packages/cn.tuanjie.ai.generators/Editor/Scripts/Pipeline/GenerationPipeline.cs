@@ -6,7 +6,6 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEditor;
-using UnityEditor.Animations;
 using UnityEngine;
 using TJGenerators;
 using TJGenerators.Generators;
@@ -29,6 +28,12 @@ namespace TJGenerators.Pipeline
 
         private const string SAVE_DIRECTORY = "Assets/TJGenerators/";
         private const string HISTORY_DIRECTORY = "Assets/TJGenerators/History/";
+
+        /// <summary>
+        /// 模型绑定到 Prefab 时的目标包裹尺寸（单位：米）。
+        /// 以模型包围盒最长边为准做归一化，使不同源头生成的 3D 模型在场景中大小一致、不用手动改 scale。
+        /// </summary>
+        private const float DefaultModelTargetSize = 1f;
 
         private IGenerationPipelineHost _host;
         private TJGeneratorsTaskHandle _activeTaskHandle;
@@ -682,21 +687,12 @@ namespace TJGenerators.Pipeline
 
                 TJLog.Log($"[GenerationPipeline] 开始下载: {modelUrl}");
 
-                string animationUrl = generator.GetAnimationUrl(response);
-                string walkingAnimUrl = generator.GetWalkingAnimationUrl(response);
-                string runningAnimUrl = generator.GetRunningAnimationUrl(response);
-                bool hasAnimations =
-                    !string.IsNullOrEmpty(animationUrl)
-                    || !string.IsNullOrEmpty(walkingAnimUrl)
-                    || !string.IsNullOrEmpty(runningAnimUrl);
-
                 yield return DownloadModel(
                     generator,
                     modelUrl,
                     savePath,
                     isFBX,
-                    renderedImageUrl,
-                    hasAnimations ? response : null
+                    renderedImageUrl
                 );
             }
             else
@@ -708,15 +704,13 @@ namespace TJGenerators.Pipeline
 
         /// <summary>
         /// 下载模型文件。当 isFBX 且 renderedImageUrl 非空时，会下载 webp 贴图并应用到 FBX 材质。
-        /// 如果 response 不为 null，还会下载动画模型文件。
         /// </summary>
         private IEnumerator DownloadModel(
             ModelGeneratorBase generator,
             string modelUrl,
             string savePath,
             bool isFBX = false,
-            string renderedImageUrl = null,
-            TJTaskStatusResponse response = null
+            string renderedImageUrl = null
         )
         {
             string uniquePath = ResolveModelDownloadPath(savePath, modelUrl);
@@ -785,26 +779,26 @@ namespace TJGenerators.Pipeline
 
             if (isFBX)
             {
-                bool hasAnimations =
-                    response != null
-                    && (
-                        !string.IsNullOrEmpty(generator.GetAnimationUrl(response))
-                        || !string.IsNullOrEmpty(generator.GetWalkingAnimationUrl(response))
-                        || !string.IsNullOrEmpty(generator.GetRunningAnimationUrl(response))
-                    );
-                ModelPostProcessing(finalModelPath, renderedTexturePath, hasAnimations);
+                ModelPostProcessing(finalModelPath, renderedTexturePath);
                 AssetDatabase.Refresh();
+
+                if (!ValidateImportedFbxMesh(finalModelPath, out string meshReason))
+                {
+                    TJLog.LogError(
+                        $"[GenerationPipeline] FBX 网格校验失败（{meshReason}）: {finalModelPath}"
+                    );
+                    HandleError(
+                        generator,
+                        TJGeneratorsL10n.L("模型文件损坏（顶点数为0），请重试生成")
+                    );
+                    yield break;
+                }
             }
 
             if (finalModelPath.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
             {
                 ObjModelPostProcessing(finalModelPath);
                 AssetDatabase.Refresh();
-            }
-
-            if (response != null)
-            {
-                yield return DownloadAnimationModels(generator, response, finalModelPath);
             }
 
             if (
@@ -825,7 +819,7 @@ namespace TJGenerators.Pipeline
                 );
             }
 
-            // 混元 Motion 等：动画面片在单一主 FBX 内且无单独动画下载 URL 时，从主 FBX 建单状态自循环控制器
+            // 混元 Motion 等：动画面片在单一主 FBX 内时，从主 FBX 建单状态自循环控制器
             if (
                 _pipelineSettings.GetPostProcessingSingleClipLoopAnimatorController()
                 && finalModelPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase)
@@ -857,12 +851,13 @@ namespace TJGenerators.Pipeline
             }
 
             // 绑定到Prefab：UniRig + 混元 Motion 后的 FBX 姿态/尺度已由管线决定，勿再套后处理里的 modelScale/rotation。
+            // 静态模型按包围盒自适应归一化到目标尺寸，避免模型过小（一个点）需要手动改 scale。
             bool addMotion = generator.GetAddMotionEnabled();
             float bindScale = addMotion ? 1f : _pipelineSettings.GetModelScale();
             Vector3 bindRotation = addMotion
                 ? Vector3.zero
                 : _pipelineSettings.GetModelRotation();
-            BindModelToPrefab(modelPathForBind, bindScale, bindRotation);
+            BindModelToPrefab(modelPathForBind, bindScale, bindRotation, autoFitToTargetScale: !addMotion);
 
             CompleteGeneration(generator, modelPathForBind);
         }
@@ -1219,104 +1214,7 @@ namespace TJGenerators.Pipeline
             );
         }
 
-        private IEnumerator DownloadAnimationModels(
-            ModelGeneratorBase generator,
-            TJTaskStatusResponse response,
-            string mainModelPath
-        )
-        {
-            string modelDir = Path.GetDirectoryName(mainModelPath);
-            string baseName = Path.GetFileNameWithoutExtension(mainModelPath);
-
-            string animationUrl = generator.GetAnimationUrl(response);
-            string walkingAnimUrl = generator.GetWalkingAnimationUrl(response);
-            string runningAnimUrl = generator.GetRunningAnimationUrl(response);
-
-            string animPath = null;
-            string walkPath = null;
-            string runPath = null;
-
-            if (!string.IsNullOrEmpty(animationUrl))
-            {
-                generator.ButtonText = TJGeneratorsL10n.L("下载动画...");
-                _host.Repaint();
-
-                string animExt =
-                    GenerationAssetFormatUtils.GetExtensionFromUrl(animationUrl) ?? ".fbx";
-                animPath = Path.Combine(modelDir, baseName + "_animation" + animExt)
-                    .Replace("\\", "/");
-                TJLog.Log($"[GenerationPipeline] 下载动画模型: {animationUrl} -> {animPath}");
-                bool animDownloaded = false;
-                yield return DownloadFile(animationUrl, animPath, ok => animDownloaded = ok);
-                if (!animDownloaded)
-                    animPath = null;
-            }
-
-            if (!string.IsNullOrEmpty(walkingAnimUrl))
-            {
-                generator.ButtonText = TJGeneratorsL10n.L("下载行走动画...");
-                _host.Repaint();
-
-                string walkExt =
-                    GenerationAssetFormatUtils.GetExtensionFromUrl(walkingAnimUrl) ?? ".fbx";
-                walkPath = Path.Combine(modelDir, baseName + "_walking" + walkExt)
-                    .Replace("\\", "/");
-                TJLog.Log($"[GenerationPipeline] 下载行走动画: {walkingAnimUrl} -> {walkPath}");
-                bool walkDownloaded = false;
-                yield return DownloadFile(walkingAnimUrl, walkPath, ok => walkDownloaded = ok);
-                if (!walkDownloaded)
-                    walkPath = null;
-            }
-
-            if (!string.IsNullOrEmpty(runningAnimUrl))
-            {
-                generator.ButtonText = TJGeneratorsL10n.L("下载奔跑动画...");
-                _host.Repaint();
-
-                string runExt =
-                    GenerationAssetFormatUtils.GetExtensionFromUrl(runningAnimUrl) ?? ".fbx";
-                runPath = Path.Combine(modelDir, baseName + "_running" + runExt).Replace("\\", "/");
-                TJLog.Log($"[GenerationPipeline] 下载奔跑动画: {runningAnimUrl} -> {runPath}");
-                bool runDownloaded = false;
-                yield return DownloadFile(runningAnimUrl, runPath, ok => runDownloaded = ok);
-                if (!runDownloaded)
-                    runPath = null;
-            }
-
-            if (
-                !string.IsNullOrEmpty(animPath)
-                && animPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase)
-            )
-                RiggedModelPostProcess.SetupAnimationImport(animPath, loopTime: false);
-            if (
-                !string.IsNullOrEmpty(walkPath)
-                && walkPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase)
-            )
-                RiggedModelPostProcess.SetupAnimationImport(walkPath, loopTime: true);
-            if (
-                !string.IsNullOrEmpty(runPath)
-                && runPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase)
-            )
-                RiggedModelPostProcess.SetupAnimationImport(runPath, loopTime: true);
-
-            if (
-                !string.IsNullOrEmpty(animPath)
-                || !string.IsNullOrEmpty(walkPath)
-                || !string.IsNullOrEmpty(runPath)
-            )
-            {
-                generator.ButtonText = TJGeneratorsL10n.L("创建动画控制器...");
-                _host.Repaint();
-
-                CreateAnimatorController(modelDir, baseName, animPath, walkPath, runPath);
-            }
-        }
-
-        private IEnumerator DownloadFile(
-            string url,
-            string savePath,
-            Action<bool> onComplete = null
-        )
+        private IEnumerator DownloadFile(string url, string savePath)
         {
             string directory = Path.GetDirectoryName(savePath)?.Replace('\\', '/');
             if (!string.IsNullOrEmpty(directory))
@@ -1330,8 +1228,7 @@ namespace TJGenerators.Pipeline
                 onError: err => downloadError = err
             );
 
-            bool success = string.IsNullOrEmpty(downloadError);
-            if (success)
+            if (string.IsNullOrEmpty(downloadError))
             {
                 PathUtils.ImportAssetAfterDiskWrite(savePath);
                 TJLog.Log($"[GenerationPipeline] 文件下载完成: {savePath}");
@@ -1341,151 +1238,6 @@ namespace TJGenerators.Pipeline
                 TJLog.LogWarning(
                     $"[GenerationPipeline] 文件下载失败: {url}, error: {downloadError}"
                 );
-            }
-
-            onComplete?.Invoke(success);
-        }
-
-        private void CreateAnimatorController(
-            string modelDir,
-            string baseName,
-            string animPath,
-            string walkPath,
-            string runPath
-        )
-        {
-            try
-            {
-                modelDir = PathUtils.NormalizeModelDirectory(modelDir);
-
-                string controllerPath = Path.Combine(modelDir, baseName + "_Controller.controller")
-                    .Replace("\\", "/");
-                string controllerDir = Path.GetDirectoryName(controllerPath).Replace("\\", "/");
-                string absoluteControllerDir = PathUtils.ToAbsoluteAssetPath(controllerDir);
-                if (
-                    !string.IsNullOrEmpty(absoluteControllerDir)
-                    && !Directory.Exists(absoluteControllerDir)
-                )
-                    Directory.CreateDirectory(absoluteControllerDir);
-
-                if (
-                    AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(controllerPath) != null
-                )
-                {
-                    TJLog.Log($"[GenerationPipeline] Animator Controller 已存在: {controllerPath}");
-                    return;
-                }
-
-                var controller = AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
-                if (controller == null)
-                {
-                    TJLog.LogWarning(
-                        $"[GenerationPipeline] 无法创建 Animator Controller: {controllerPath}"
-                    );
-                    return;
-                }
-
-                controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
-                controller.AddParameter("Action", AnimatorControllerParameterType.Trigger);
-                var rootStateMachine = controller.layers[0].stateMachine;
-
-                AnimationClip animClip = null;
-                AnimationClip walkClip = null;
-                AnimationClip runClip = null;
-
-                if (!string.IsNullOrEmpty(animPath))
-                    animClip = RiggedModelPostProcess.GetAnimationClipFromFbx(animPath);
-                if (!string.IsNullOrEmpty(walkPath))
-                    walkClip = RiggedModelPostProcess.GetAnimationClipFromFbx(walkPath);
-                if (!string.IsNullOrEmpty(runPath))
-                    runClip = RiggedModelPostProcess.GetAnimationClipFromFbx(runPath);
-
-                // 创建 Idle 状态 — 兜底状态；有行走动画时复用其 clip，避免 Play 时出现 T-pose
-                var idleState = rootStateMachine.AddState("Idle");
-                if (walkClip != null)
-                    idleState.motion = walkClip;
-
-                AnimatorState walkState = null;
-                if (walkClip != null)
-                {
-                    walkState = rootStateMachine.AddState("Walk");
-                    walkState.motion = walkClip;
-
-                    var idleToWalk = idleState.AddTransition(walkState);
-                    idleToWalk.AddCondition(AnimatorConditionMode.Greater, 0.1f, "Speed");
-                    idleToWalk.duration = 0.2f;
-
-                    var walkToIdle = walkState.AddTransition(idleState);
-                    walkToIdle.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
-                    walkToIdle.duration = 0.2f;
-
-                    TJLog.Log($"[GenerationPipeline] 添加 Walk 状态: {walkClip.name}");
-                }
-
-                AnimatorState runState = null;
-                if (runClip != null)
-                {
-                    runState = rootStateMachine.AddState("Run");
-                    runState.motion = runClip;
-
-                    if (walkState != null)
-                    {
-                        var walkToRun = walkState.AddTransition(runState);
-                        walkToRun.AddCondition(AnimatorConditionMode.Greater, 0.5f, "Speed");
-                        walkToRun.duration = 0.15f;
-
-                        var runToWalk = runState.AddTransition(walkState);
-                        runToWalk.AddCondition(AnimatorConditionMode.Less, 0.5f, "Speed");
-                        runToWalk.duration = 0.15f;
-                    }
-
-                    var idleToRun = idleState.AddTransition(runState);
-                    idleToRun.AddCondition(AnimatorConditionMode.Greater, 0.5f, "Speed");
-                    idleToRun.duration = 0.2f;
-
-                    var runToIdle = runState.AddTransition(idleState);
-                    runToIdle.AddCondition(AnimatorConditionMode.Less, 0.1f, "Speed");
-                    runToIdle.duration = 0.2f;
-
-                    TJLog.Log($"[GenerationPipeline] 添加 Run 状态: {runClip.name}");
-                }
-
-                AnimatorState actionState = null;
-                if (animClip != null)
-                {
-                    actionState = rootStateMachine.AddState("Action");
-                    actionState.motion = animClip;
-
-                    var anyToAction = rootStateMachine.AddAnyStateTransition(actionState);
-                    anyToAction.AddCondition(AnimatorConditionMode.If, 0, "Action");
-                    anyToAction.duration = 0.1f;
-                    anyToAction.canTransitionToSelf = false;
-
-                    var actionReturn = actionState.AddTransition(walkState ?? idleState);
-                    actionReturn.hasExitTime = true;
-                    actionReturn.exitTime = 0.9f;
-                    actionReturn.duration = 0.2f;
-
-                    TJLog.Log($"[GenerationPipeline] 添加 Action 状态: {animClip.name}");
-                }
-
-                // 默认状态优先级：Action > Walk > Idle
-                // Action 优先：点 Play 即看到用户请求的动作；Walk 次之；无 clip 时 Idle（T-pose 属预期）
-                if (actionState != null)
-                    rootStateMachine.defaultState = actionState;
-                else if (walkState != null)
-                    rootStateMachine.defaultState = walkState;
-                else
-                    rootStateMachine.defaultState = idleState;
-
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-
-                TJLog.Log($"[GenerationPipeline] Animator Controller 创建完成: {controllerPath}");
-            }
-            catch (Exception e)
-            {
-                TJLog.LogError($"[GenerationPipeline] 创建 Animator Controller 失败: {e.Message}");
             }
         }
 
@@ -1582,6 +1334,22 @@ namespace TJGenerators.Pipeline
             Vector3 rotation = default
         )
         {
+            BindModelToPrefab(modelPath, scale, rotation, autoFitToTargetScale: true);
+        }
+
+        /// <summary>
+        /// 将生成的模型绑定到目标 Prefab，并按包围盒把模型自适应归一化到目标尺寸，
+        /// 避免不同生成器产出模型的原始单位差异导致绑定后模型在场景中过小（表现为一个点）。
+        /// 仅目标尺寸大于 0 且可计算到有效包围盒时才做归一化；此时忽略传入的 scale。
+        /// </summary>
+        public void BindModelToPrefab(
+            string modelPath,
+            float scale = 1f,
+            Vector3 rotation = default,
+            float targetSize = DefaultModelTargetSize,
+            bool autoFitToTargetScale = false
+        )
+        {
             var targetAsset = _host.GetTargetAsset();
             if (targetAsset == null || !targetAsset.IsValid())
                 return;
@@ -1632,6 +1400,14 @@ namespace TJGenerators.Pipeline
                     modelInstance.transform.localRotation = Quaternion.Euler(rotation);
                     modelInstance.transform.localScale = new Vector3(scale, scale, scale);
 
+                    // 模型如果小到几乎看不见（一个点），按包围盒自适应放大到目标尺寸。
+                    if (autoFitToTargetScale && targetSize > 0f)
+                    {
+                        float normalized = ComputeAutoFitScale(modelPrefab, targetSize);
+                        if (normalized > 0f)
+                            modelInstance.transform.localScale = new Vector3(normalized, normalized, normalized);
+                    }
+
                     ApplyDefaultMaterialIfMissing(modelInstance);
                 }
 
@@ -1678,6 +1454,83 @@ namespace TJGenerators.Pipeline
             RestoreSceneInstanceLocalTransforms(savedInstanceTransforms);
 
             TJLog.Log($"[GenerationPipeline] 模型已绑定到Prefab: {prefabPath}");
+        }
+
+        /// <summary>
+        /// 按模型所有渲染器包围盒的最长边计算归一化 scale，使其最长边恰好等于 targetSize。
+        /// 返回 targetSize / longestEdge。无可渲染网格、或包围盒无法计算/退化为 0 时返回 0（表示不做归一化）。
+        /// </summary>
+        private float ComputeAutoFitScale(GameObject modelPrefab, float targetSize)
+        {
+            var renderers = modelPrefab.GetComponentsInChildren<Renderer>(true);
+            if (renderers == null || renderers.Length == 0)
+                return 0f;
+
+            var bounds = new Bounds();
+            bool hasBounds = false;
+            foreach (var r in renderers)
+            {
+                if (r == null) continue;
+                if (!hasBounds)
+                {
+                    bounds = r.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(r.bounds);
+                }
+            }
+
+            if (!hasBounds)
+                return 0f;
+
+            Vector3 size = bounds.size;
+            float longest = Mathf.Max(Mathf.Max(size.x, size.y), size.z);
+            if (longest <= Mathf.Epsilon)
+                return 0f;
+
+            return targetSize / longest;
+        }
+
+        /// <summary>
+        /// 失败/取消时从目标 Prefab 中删除名为 "Placeholder" 的子对象，保留根与其他子节点。
+        /// </summary>
+        private void RemovePlaceholderFromPrefab()
+        {
+            var targetAsset = _host.GetTargetAsset();
+            if (targetAsset == null || !targetAsset.IsValid())
+                return;
+
+            string prefabPath = targetAsset.GetPath().Replace("\\", "/");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null)
+                return;
+
+            var savedTransforms = CollectSceneInstanceLocalTransforms(prefab);
+            bool removed = false;
+
+            using (var editScope = new PrefabContentsEditScope(prefabPath))
+            {
+                var prefabRoot = editScope.prefabContentsRoot;
+                for (int i = prefabRoot.transform.childCount - 1; i >= 0; i--)
+                {
+                    var child = prefabRoot.transform.GetChild(i).gameObject;
+                    if (child.name == "Placeholder")
+                    {
+                        UnityEngine.Object.DestroyImmediate(child);
+                        removed = true;
+                    }
+                }
+            }
+
+            if (!removed)
+                return;
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            RestoreSceneInstanceLocalTransforms(savedTransforms);
+            TJLog.Log("[GenerationPipeline] 已移除占位 GameObject");
         }
 
         private struct InstanceTransformSnapshot
@@ -2029,6 +1882,7 @@ namespace TJGenerators.Pipeline
                 TJGeneratorsHistoryManager.RemovePlaceholder(generator.CurrentGeneratingTaskId);
             }
 
+            RemovePlaceholderFromPrefab();
             EndGenerationState(generator);
             _host.RefreshHistory();
             _host.Repaint();
@@ -2054,6 +1908,7 @@ namespace TJGenerators.Pipeline
             if (!string.IsNullOrEmpty(generator.CurrentGeneratingTaskId))
                 TJGeneratorsHistoryManager.RemovePlaceholder(generator.CurrentGeneratingTaskId);
 
+            RemovePlaceholderFromPrefab();
             EndGenerationState(generator);
             _host.RefreshHistory();
             _host.Repaint();
@@ -2293,11 +2148,9 @@ namespace TJGenerators.Pipeline
         /// <summary>
         /// 模型后处理（提取纹理、设置法线贴图等）。renderedTexturePath 为 Tripo rendered_image (webp) 的 Unity 相对路径时，会将其设为所有材质的主贴图。
         /// </summary>
-        /// <param name="hasSeparateAnimations">是否有单独的动画文件（如果有，主模型不导入动画）</param>
         private void ModelPostProcessing(
             string assetPath,
-            string renderedTexturePath = null,
-            bool hasSeparateAnimations = false
+            string renderedTexturePath = null
         )
         {
             ModelImporter modelImporter = AssetImporter.GetAtPath(assetPath) as ModelImporter;
@@ -2351,15 +2204,6 @@ namespace TJGenerators.Pipeline
 
                 AssetDatabase.Refresh();
 
-                if (hasSeparateAnimations)
-                {
-                    modelImporter.animationType = ModelImporterAnimationType.Human;
-                    modelImporter.importAnimation = false;
-                    TJLog.Log(
-                        $"[GenerationPipeline] 主模型设置为 Humanoid，禁用动画导入（动画在单独文件中）"
-                    );
-                }
-
                 modelImporter.isReadable = true;
                 modelImporter.SearchAndRemapMaterials(
                     ModelImporterMaterialName.BasedOnTextureName,
@@ -2370,6 +2214,49 @@ namespace TJGenerators.Pipeline
 
                 ApplyRenderedTextureToImportedModel(assetPath, renderedTexturePath);
             }
+        }
+
+        /// <summary>
+        /// 校验已导入 FBX 是否含有效网格（顶点数 &gt; 0）。
+        /// 损坏或空网格资产应在 CompleteGeneration 之前失败，避免 Agent 写入坏 model_path。
+        /// </summary>
+        private static bool ValidateImportedFbxMesh(string assetPath, out string reason)
+        {
+            reason = null;
+            var go = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+            if (go == null)
+            {
+                reason = "无法加载 FBX GameObject";
+                return false;
+            }
+
+            var meshFilters = go.GetComponentsInChildren<MeshFilter>(true);
+            var skinnedRenderers = go.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+
+            int totalVertices = 0;
+            foreach (var mf in meshFilters)
+            {
+                if (mf.sharedMesh != null)
+                    totalVertices += mf.sharedMesh.vertexCount;
+            }
+
+            foreach (var smr in skinnedRenderers)
+            {
+                if (smr.sharedMesh != null)
+                    totalVertices += smr.sharedMesh.vertexCount;
+            }
+
+            if (totalVertices == 0)
+            {
+                int meshCount = meshFilters.Length + skinnedRenderers.Length;
+                reason =
+                    meshCount == 0
+                        ? "FBX 不含任何网格"
+                        : $"FBX 所有网格顶点数为 0（共 {meshCount} 个网格）";
+                return false;
+            }
+
+            return true;
         }
 
         private IEnumerator WaitSeconds(float seconds

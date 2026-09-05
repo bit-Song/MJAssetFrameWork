@@ -11,7 +11,7 @@ namespace TJGenerators.Config
     {
         public float modelScale = 1f;
         /// <summary>
-        /// 为 true 时，在「动画在同一主 FBX 内、且无单独 animation/walk/run URL」的流程末尾，
+        /// 为 true 时，在动画已嵌入同一主 FBX 的流程末尾，
         /// 从主 FBX 取出剪辑并创建仅含 default 状态 + 自循环过渡的 AnimatorController（适用于混元 Motion 等）。
         /// </summary>
         public bool singleClipLoopAnimatorController = false;

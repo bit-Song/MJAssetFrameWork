@@ -124,7 +124,11 @@ namespace UnityTcp.Editor.Tools
             string modelVersion = null,
             string sessionId = "")
         {
-            string prefix = generatorType == "tripo-p1" ? "tripo_model" : "static_model";
+            string prefix = generatorType == "tripo-p1"
+                ? "tripo_model"
+                : generatorType == "tripo-texture-model"
+                    ? "texture_model"
+                    : "static_model";
             string taskId = Store.AllocateTaskId(prefix);
 
             var taskInfo = new StaticModelTaskInfo
@@ -173,9 +177,7 @@ namespace UnityTcp.Editor.Tools
                     t.EndTime    = DateTime.Now;
                 });
                 GenerationNotifier.NotifyCompleted(
-                    toolName: taskInfo.GeneratorType == "tripo-p1"
-                              ? "generate_3d_model_by_tripo_p1"
-                              : "generate_3d_model_by_rodin",
+                    toolName: Generate3DModelTool.ResolveModelToolName(taskInfo.GeneratorType),
                     taskId:        taskInfo.TaskId,
                     backendTaskId: taskInfo.BackendTaskId,
                     extraData: new JObject
@@ -202,9 +204,7 @@ namespace UnityTcp.Editor.Tools
                     t.EndTime      = DateTime.Now;
                 });
                 GenerationNotifier.NotifyFailed(
-                    toolName: taskInfo.GeneratorType == "tripo-p1"
-                              ? "generate_3d_model_by_tripo_p1"
-                              : "generate_3d_model_by_rodin",
+                    toolName: Generate3DModelTool.ResolveModelToolName(taskInfo.GeneratorType),
                     taskId:        taskInfo.TaskId,
                     backendTaskId: taskInfo.BackendTaskId,
                     errorMessage:  h.ErrorMessage,
@@ -267,7 +267,7 @@ namespace UnityTcp.Editor.Tools
             CustomToolDomainReloadRecovery.Resume(
                 "Generate3DModelTool",
                 ConfigType.Generator,
-                t => t.modelVersion == "rodin" || t.modelVersion == "tencent-generation" || t.modelVersion == "tripo-p1",
+                t => t.modelVersion == "rodin" || t.modelVersion == "tencent-generation" || t.modelVersion == "tripo-p1" || t.modelVersion == "tripo-texture-model",
                 () => StaticModelTaskTracker.GetAllTasks(),
                 (interrupted, _, generator) =>
                 {
@@ -291,9 +291,7 @@ namespace UnityTcp.Editor.Tools
                         : null;
 
                     var host = new StaticModelRecoveryHost(targetAsset, interrupted.backendTaskId, generator);
-                    string toolName = interrupted.modelVersion == "tripo-p1"
-                        ? "generate_3d_model_by_tripo_p1"
-                        : "generate_3d_model_by_rodin";
+                    string toolName = Generate3DModelTool.ResolveModelToolName(interrupted.modelVersion);
                     CustomToolDomainReloadRecovery.StartPolling(
                         "Generate3DModelTool", host, ConfigType.Generator,
                         interrupted.sessionId, toolName, generator, interrupted.backendTaskId);
@@ -359,12 +357,10 @@ namespace UnityTcp.Editor.Tools
 
             TJLog.Log($"[Generate3DModelTool] Recovered task completed ({tasksToUpdate.Count} task(s) updated): {modelPath}");
 
-            var notifyTask = StaticModelTaskTracker.GetTaskByBackendId(_backendTaskId);
+            var notifyTask = byBackend;
             if (notifyTask != null)
                 GenerationNotifier.NotifyCompleted(
-                    toolName: notifyTask.GeneratorType == "tripo-p1"
-                              ? "generate_3d_model_by_tripo_p1"
-                              : "generate_3d_model_by_rodin",
+                    toolName: Generate3DModelTool.ResolveModelToolName(notifyTask.GeneratorType),
                     taskId:        notifyTask.TaskId,
                     backendTaskId: _backendTaskId,
                     extraData: new JObject
@@ -381,6 +377,8 @@ namespace UnityTcp.Editor.Tools
                         ["end_time"]         = notifyTask.EndTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "",
                         ["duration_seconds"] = notifyTask.EndTime.HasValue ? (int)(notifyTask.EndTime.Value - notifyTask.StartTime).TotalSeconds : 0
                     });
+            else
+                TJLog.LogWarning($"[Generate3DModelTool] Recovery completed but notifyTask not found, backend_task_id={_backendTaskId}; notification will be lost.");
         }
 
         public override void ShowDialog(string title, string message)
@@ -400,9 +398,7 @@ namespace UnityTcp.Editor.Tools
                         t.EndTime      = DateTime.Now;
                     });
                     GenerationNotifier.NotifyFailed(
-                        toolName: trackerTask.GeneratorType == "tripo-p1"
-                                  ? "generate_3d_model_by_tripo_p1"
-                                  : "generate_3d_model_by_rodin",
+                        toolName: Generate3DModelTool.ResolveModelToolName(trackerTask.GeneratorType),
                         taskId:        trackerTask.TaskId,
                         backendTaskId: _backendTaskId,
                         errorMessage:  friendlyError.TechnicalMessage,
@@ -447,9 +443,11 @@ namespace UnityTcp.Editor.Tools
         private const string GeneratorId = "rodin";
 
         [ExecuteCustomTool.CustomTool("generate_3d_model_by_rodin",
-            "Generate a static (non-animated) 3D model from a text prompt and/or reference image using Rodin Gen-2.5 (Extreme-High tier by default). " +
+            "Generate a 3D model from a text prompt and/or reference image using Rodin Gen-2.5 (Extreme-High tier by default). " +
             "Use this for high-precision 3D objects: hero assets, detailed props, PBR materials, architecture, etc. " +
-            "For rigged HUMANOID characters with animations, use generate_animated_character instead. " +
+            "For an animated HUMANOID from scratch (same as UI 添加动作): set add_motion=true and motion_description; " +
+            "after the mesh lands the pipeline runs UniRig then HunyuanMotion automatically. Recommend ta_pose=true. " +
+            "For an existing FBX/OBJ use generate_animated_character / generate_rigged_model / generate_model_motion instead. " +
             "Key parameters: " +
             "prompt (string, text description — required if image_path is not provided), " +
             "image_path (string, Unity asset path or absolute path to a reference image — required if prompt is not provided; can be combined with prompt), " +
@@ -457,10 +455,14 @@ namespace UnityTcp.Editor.Tools
             "force_overwrite (bool, default false — set true to replace an existing prefab at the same path), " +
             "tier (string, default 'Gen-2.5-Extreme-High' — options: Gen-2.5-Extreme-Low/Low/Medium/High/Extreme-High), " +
             "quality (string, default 'medium' — options: extra-low/low/medium/high), " +
+            "quality_override (int, optional custom target face count 500-2000000, takes precedence over quality — " +
+            "set when the user wants a specific face budget, e.g. lightweight game props; Quad mode caps at 200000), " +
             "material (string, default 'PBR' — options: PBR/Shaded), " +
             "mesh_mode (string, default 'Quad' — options: Quad/Raw), " +
-            "ta_pose (bool, default false), " +
-            "geometry_format (string, default 'fbx'). " +
+            "ta_pose (bool, default false — set true when add_motion so the mesh is easier to rig), " +
+            "geometry_format (string, default 'fbx'), " +
+            "add_motion (bool, default false — same as UI 添加动作: UniRig + HunyuanMotion after the model is ready), " +
+            "motion_description (string, required when add_motion is true, e.g. 'a walking cycle'). " +
             "Generation takes 3–15 minutes. This call SYNCHRONOUSLY submits the task to the backend " +
             "before returning. " +
             "On success, instantiate the prefab immediately (it contains a Cube placeholder). " +
@@ -548,6 +550,9 @@ namespace UnityTcp.Editor.Tools
                 }
 
                 ApplyParameters(generator, parameters);
+                bool addMotion = TryApplyAddMotion(generator, parameters, out string motionErr);
+                if (motionErr != null)
+                    return Fail(motionErr);
 
                 var submitResult = TJGeneratorsGenerationService.SubmitTaskSync(generator, sessionId);
                 if (!submitResult.Success)
@@ -583,7 +588,7 @@ namespace UnityTcp.Editor.Tools
 
                 TJLog.Log($"[Generate3DModelTool] 轮询已启动，task_id={taskId}, backend_task_id={submitResult.BackendTaskId}");
 
-                return new Dictionary<string, object>
+                var result = new Dictionary<string, object>
                 {
                     { "success",            true },
                     { "submission_success", true },
@@ -594,20 +599,34 @@ namespace UnityTcp.Editor.Tools
                     { "prompt",             prompt ?? "" },
                     { "image_path",         resolvedImagePath ?? "" },
                     { "prefab_output_path", createdPrefabPath },
+                    { "add_motion",         addMotion },
                     { "message",
-                        "3D model generation started. " +
-                        "STEP 1 (do now): Instantiate the prefab at prefab_output_path — it contains a Cube placeholder. " +
-                        "STEP 2 (critical): END THIS RESPONSE TURN immediately. " +
-                        "STEP 3 (automatic): A <bg_task_done> notification will appear in your next turn (~10 min) " +
-                        "containing ALL generation results (model_path, prefab_path, preview_url, timing, etc.). " +
-                        "*** POLLING IS STRICTLY FORBIDDEN — do NOT call query_3d_model_status_by_rodin repeatedly. " +
-                        "Only call it ONCE as a last-resort fallback if no notification arrives. ***" +
-                        "*** RE-SUBMISSION IS STRICTLY FORBIDDEN — do NOT call generate_3d_model_by_rodin " +
-                        "again for the same model, regardless of outcome. Report errors and stop. ***" },
-                    { "estimated_wait_seconds", 600 },
+                        addMotion
+                            ? "3D model + UniRig + HunyuanMotion started (same as UI 添加动作). " +
+                              "STEP 1 (do now): Instantiate the prefab at prefab_output_path — it contains a Cube placeholder. " +
+                              "STEP 2 (critical): END THIS RESPONSE TURN immediately. " +
+                              "STEP 3 (automatic): A <bg_task_done> notification will appear after the mesh, rig, and motion all finish " +
+                              "(~12-20 min) with model_path / prefab_path / preview_url. Do NOT call generate_animated_character. " +
+                              "*** POLLING IS STRICTLY FORBIDDEN — do NOT call query_3d_model_status_by_rodin repeatedly. " +
+                              "Only call it ONCE as a last-resort fallback if no notification arrives. ***" +
+                              "*** RE-SUBMISSION IS STRICTLY FORBIDDEN — do NOT call generate_3d_model_by_rodin " +
+                              "again for the same model, regardless of outcome. Report errors and stop. ***"
+                            : "3D model generation started. " +
+                              "STEP 1 (do now): Instantiate the prefab at prefab_output_path — it contains a Cube placeholder. " +
+                              "STEP 2 (critical): END THIS RESPONSE TURN immediately. " +
+                              "STEP 3 (automatic): A <bg_task_done> notification will appear in your next turn (~10 min) " +
+                              "containing ALL generation results (model_path, prefab_path, preview_url, timing, etc.). " +
+                              "*** POLLING IS STRICTLY FORBIDDEN — do NOT call query_3d_model_status_by_rodin repeatedly. " +
+                              "Only call it ONCE as a last-resort fallback if no notification arrives. ***" +
+                              "*** RE-SUBMISSION IS STRICTLY FORBIDDEN — do NOT call generate_3d_model_by_rodin " +
+                              "again for the same model, regardless of outcome. Report errors and stop. ***" },
+                    { "estimated_wait_seconds", addMotion ? 900 : 600 },
                     { "preview_url", PreviewUrlHelper.BuildFixedPreviewUrl(submitResult.BackendTaskId) },
                     { "notification_mode",      "bg_task_done" }
                 };
+                if (addMotion)
+                    result["motion_description"] = generator.GetMotionDescription();
+                return result;
             }
             catch (Exception e)
             {
@@ -662,9 +681,6 @@ namespace UnityTcp.Editor.Tools
                     result["end_time"]         = task.EndTime.Value.ToString("yyyy-MM-dd HH:mm:ss");
                     result["duration_seconds"] = (int)(task.EndTime.Value - task.StartTime).TotalSeconds;
                 }
-
-                if (task.Status == "completed" && !string.IsNullOrEmpty(task.ModelPath))
-                    result["result_summary"] = $"Generation completed. Model: {task.ModelPath}. Prefab: {task.PrefabPath ?? "N/A"}.";
 
                 if (task.Status == "interrupted")
                     result["hint"] = "Re-generate using generate_3d_model_by_rodin with force_overwrite=true and the same prefab_output_path.";
@@ -800,7 +816,7 @@ namespace UnityTcp.Editor.Tools
             {
                 if (h == null || h.isGenerating || string.IsNullOrEmpty(h.modelPath))
                     continue;
-                if (h.modelVersion != GeneratorId && h.modelVersion != "rodin" && h.modelVersion != "tencent-generation")
+                if (h.modelVersion != "rodin" && h.modelVersion != "tencent-generation" && h.modelVersion != "tripo-texture-model")
                     continue;
 
                 bool guidMatch   = !string.IsNullOrEmpty(guid) && (h.assetGuid ?? "") == guid;
@@ -884,6 +900,13 @@ namespace UnityTcp.Editor.Tools
             if (parameters["quality"] != null)
                 generator.SetParameter("quality", parameters["quality"].ToString());
 
+            // Custom face count cap (overrides the quality preset). Default to 0 (= not sent) so the
+            // high-precision default tier isn't silently capped; low tiers still get the backend auto-cap.
+            if (parameters["quality_override"] != null)
+                generator.SetParameter("qualityOverride", parameters["quality_override"].ToObject<int>());
+            else
+                generator.SetParameter("qualityOverride", 0);
+
             if (parameters["material"] != null)
                 generator.SetParameter("material", parameters["material"].ToString());
 
@@ -895,6 +918,28 @@ namespace UnityTcp.Editor.Tools
 
             if (parameters["geometry_format"] != null)
                 generator.SetParameter("geometryFormat", parameters["geometry_format"].ToString());
+        }
+
+        /// <summary>
+        /// UI「添加动作」同款：主模型落地后走 UniRig + HunyuanMotion。
+        /// </summary>
+        /// <returns>true 表示已打开后处理；error 非空表示参数非法。</returns>
+        internal static bool TryApplyAddMotion(DynamicGenerator generator, JObject parameters, out string error)
+        {
+            error = null;
+            bool addMotion = parameters["add_motion"]?.ToObject<bool>() ?? false;
+            if (!addMotion)
+                return false;
+
+            string motionDescription = parameters["motion_description"]?.ToString();
+            if (string.IsNullOrWhiteSpace(motionDescription))
+            {
+                error = "add_motion is true but 'motion_description' is required (same as UI 添加动作). Example: 'a walking cycle'.";
+                return false;
+            }
+
+            generator.SetAddMotion(true, motionDescription.Trim());
+            return true;
         }
 
         internal static void ApplyParametersInternal(DynamicGenerator generator, JObject parameters)
@@ -933,6 +978,19 @@ namespace UnityTcp.Editor.Tools
                 { "message", message }
             };
         }
+
+        /// <summary>
+        /// Resolves the CustomTool name for notification purposes based on generator type.
+        /// </summary>
+        internal static string ResolveModelToolName(string generatorType)
+        {
+            switch (generatorType)
+            {
+                case "tripo-p1":            return "generate_3d_model_by_tripo_p1";
+                case "tripo-texture-model": return "generate_texture_model_by_tripo";
+                default:                    return "generate_3d_model_by_rodin";
+            }
+        }
 #endif
     }
 
@@ -949,10 +1007,16 @@ namespace UnityTcp.Editor.Tools
             "generate_3d_model_by_tripo_p1",
             "Generate a 3D model using Tripo P1 (supports text-to-model, image-to-model, multiview-to-model). " +
             "Default model_version is P1-20260311 (low-poly optimized). " +
+            "For an animated HUMANOID from scratch (same as UI 添加动作): set add_motion=true and motion_description; " +
+            "after the mesh lands the pipeline runs UniRig then HunyuanMotion automatically. " +
+            "For an existing FBX/OBJ use generate_animated_character / generate_rigged_model / generate_model_motion instead. " +
             "Parameters: prompt (string), image_path (string), multiview_image_paths (string[4] - [front,left,back,right]), " +
             "model_version (string), face_limit (int), texture (bool), pbr (bool), texture_seed (int), texture_quality (standard|detailed), " +
             "orientation (default|align_image - image/multiview only), " +
-            "compress (string), export_uv (bool), with_mesh_segmentation (bool, default false — enable mesh segmentation), session_id (string, optional — adds Session_{id} label to the placeholder prefab for agent session grouping). " +
+            "compress (string), export_uv (bool), with_mesh_segmentation (bool, default false — enable mesh segmentation), " +
+            "add_motion (bool, default false — UniRig + HunyuanMotion after the model is ready), " +
+            "motion_description (string, required when add_motion is true, e.g. 'a walking cycle'), " +
+            "session_id (string, optional — adds Session_{id} label to the placeholder prefab for agent session grouping). " +
             "IMPORTANT: For P1-20260311, do NOT pass unsupported params (quad/smart_low_poly/generate_parts). " +
             "This call submits a backend task then starts polling & downloading asynchronously. Returns immediately with task_id and prefab_output_path."
         )]
@@ -1033,7 +1097,12 @@ namespace UnityTcp.Editor.Tools
                     }
                     else
                     {
+                        string existingDir = Path.GetDirectoryName(prefabOutputPath)?.Replace('\\', '/');
+                        if (!string.IsNullOrEmpty(existingDir))
+                            PathUtils.EnsureAssetFolder(existingDir);
                         prefabOutputPath = AssetDatabase.GenerateUniqueAssetPath(prefabOutputPath);
+                        if (string.IsNullOrEmpty(prefabOutputPath))
+                            prefabOutputPath = Path.ChangeExtension(parameters["prefab_output_path"]?.ToString(), ".prefab");
                     }
                 }
 
@@ -1054,6 +1123,10 @@ namespace UnityTcp.Editor.Tools
 
                 if (parameters["orientation"] != null)
                     generator.SetParameter("orientation", parameters["orientation"].ToString());
+
+                bool addMotion = Generate3DModelTool.TryApplyAddMotion(generator, parameters, out string motionErr);
+                if (motionErr != null)
+                    return Generate3DModelTool.Fail(motionErr);
 
                 var submitResult = TJGeneratorsGenerationService.SubmitTaskSync(generator, sessionId);
                 if (!submitResult.Success)
@@ -1099,19 +1172,31 @@ namespace UnityTcp.Editor.Tools
                     { "prompt",             prompt ?? "" },
                     { "image_path",         resolvedImagePath ?? "" },
                     { "prefab_output_path", createdPrefabPath },
-                    { "estimated_wait_seconds", 600 },
+                    { "add_motion",         addMotion },
+                    { "motion_description", addMotion ? generator.GetMotionDescription() : "" },
+                    { "estimated_wait_seconds", addMotion ? 900 : 600 },
                     { "preview_url", PreviewUrlHelper.BuildFixedPreviewUrl(submitResult.BackendTaskId) },
                     { "notification_mode",      "bg_task_done" },
                     { "message",
-                        "3D model generation started. " +
-                        "STEP 1 (do now): Instantiate the prefab at prefab_output_path — it contains a Cube placeholder. " +
-                        "STEP 2 (critical): END THIS RESPONSE TURN immediately. " +
-                        "STEP 3 (automatic): A <bg_task_done> notification will appear in your next turn (~10 min) " +
-                        "containing ALL generation results (model_path, prefab_path, preview_url, timing, etc.). " +
-                        "*** POLLING IS STRICTLY FORBIDDEN — do NOT call query_3d_model_status_by_tripo_p1 repeatedly. " +
-                        "Only call it ONCE as a last-resort fallback if no notification arrives. ***" +
-                        "*** RE-SUBMISSION IS STRICTLY FORBIDDEN — do NOT call generate_3d_model_by_tripo_p1 " +
-                        "again for the same model, regardless of outcome. Report errors and stop. ***" }
+                        addMotion
+                            ? "3D model + UniRig + HunyuanMotion started (same as UI 添加动作). " +
+                              "STEP 1 (do now): Instantiate the prefab at prefab_output_path — it contains a Cube placeholder. " +
+                              "STEP 2 (critical): END THIS RESPONSE TURN immediately. " +
+                              "STEP 3 (automatic): A <bg_task_done> notification will appear after the mesh, rig, and motion all finish " +
+                              "(~12-20 min) with model_path / prefab_path / preview_url. Do NOT call generate_animated_character. " +
+                              "*** POLLING IS STRICTLY FORBIDDEN — do NOT call query_3d_model_status_by_tripo_p1 repeatedly. " +
+                              "Only call it ONCE as a last-resort fallback if no notification arrives. ***" +
+                              "*** RE-SUBMISSION IS STRICTLY FORBIDDEN — do NOT call generate_3d_model_by_tripo_p1 " +
+                              "again for the same model, regardless of outcome. Report errors and stop. ***"
+                            : "3D model generation started. " +
+                              "STEP 1 (do now): Instantiate the prefab at prefab_output_path — it contains a Cube placeholder. " +
+                              "STEP 2 (critical): END THIS RESPONSE TURN immediately. " +
+                              "STEP 3 (automatic): A <bg_task_done> notification will appear in your next turn (~10 min) " +
+                              "containing ALL generation results (model_path, prefab_path, preview_url, timing, etc.). " +
+                              "*** POLLING IS STRICTLY FORBIDDEN — do NOT call query_3d_model_status_by_tripo_p1 repeatedly. " +
+                              "Only call it ONCE as a last-resort fallback if no notification arrives. ***" +
+                              "*** RE-SUBMISSION IS STRICTLY FORBIDDEN — do NOT call generate_3d_model_by_tripo_p1 " +
+                              "again for the same model, regardless of outcome. Report errors and stop. ***" }
                 };
             }
             catch (Exception e)

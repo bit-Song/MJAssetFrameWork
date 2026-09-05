@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.24] - 2026-08-19
+
+### Added
+
+- 图片分层新增 Seedream Pro（`provider=seedream_pro`）：自动拆为 1 张底图 + 最多 16 个透明图层，prompt 可选，`num_layers` 忽略，支持 `size` 档位
+- Rodin 3D 模型新增面数上限 `qualityOverride`（CustomTool `quality_override`，500–2000000），优先于 quality 预设，等价 Tripo 的 faceLimit
+
+### Fixed
+
+- 图片生成显式传入 `is_segmentation` 时不再被 `outputFormat` 覆盖
+- 3D 模型绑定 Prefab 时按包围盒自动适配缩放，兼容 Unity 2019
+
+### Changed
+
+- Game UI Kit 默认改为 Seedream Pro：Step 1 生成 2848×1600 UI 截图，Step 2 图层拆分为底图 + 最多 16 层透明 PNG；`frontier` 品红底抠图拼版保留为旧路径
+- 资产库下载前同步调用后台 `record-download` 落账（首次扣费 / 去重），失败不阻断下载
+
+## [1.0.23] - 2026-08-14
+
+### Fixed
+
+- 视频窗口「参考图片（可选）」仍被拦截的问题：默认模式改为文生视频，提交时按是否上传参考图自动解析 mode；手动选图生视频但未传图时静默降级为文生视频（首帧/首尾帧模式仍校验必传图）
+
+## [1.0.22] - 2026-08-13
+
+### Added
+
+- 新增图片分层生成器（`image-layering` / Qwen）：将一张输入图拆分为多张独立 RGBA 图层 PNG；编辑器图片窗口必选参考图，CustomTool `generate_image_layers` 支持 Domain Reload 任务恢复，并配套 agent / skill
+- 视频生成支持参考图上传与动态模式：未上传参考图时文生视频，上传后自动切换参考图模式
+- 新增 Tripo 纹理重生成扩展（`generate_tripo_texture_model`）：对已有 3D 模型重新生成贴图 / PBR
+- 绑骨动画工具链重构：以 UniRig + HunyuanMotion 替代 Meshy，拆分为 `generate_rigged_model` / `generate_model_motion` / `generate_animated_character`；Tripo P1 / Rodin 文生 3D 支持 `add_motion` 一步生成带动画角色
+- 生成失败或取消时自动清理 Prefab 内残留 Placeholder 子对象；新增 `AI/工具/清理占位 GameObject` 菜单批量扫描清理
+
+### Fixed
+
+- 图片生成 `outputFormat` 与自动抠图（`isSegmentation`）联动：选 JPEG 时关闭抠图，选 PNG 时开启；默认输出格式改为 JPEG
+- Domain Reload 后生成器配置加载失败导致窗口模型列表为空的问题；增加文件系统直读配置与延迟重试
+- FBX 导入完成后校验网格顶点数，避免空/损坏模型写入 `model_path`
+- 修复 DynamicGenerator 纹理内存泄漏；多视图上传时保留已选的部分视图
+
+### Changed
+
+- 表面材质生成从精灵窗口拆分为独立 `TJGeneratorsMaterialWindow`；精灵、材质、图片、序列帧窗口共用 `TJGeneratorsAssetWindowBase` 基类
+- 材质历史记录合并同名纹理条目，并支持从纹理历史反查材质路径
+
 ## [1.0.21] - 2026-08-07
 
 ### Added

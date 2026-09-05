@@ -8,17 +8,19 @@ TJGenerators for Unity 是一款强大的 AI 内容生成插件，集成团结 A
 
 | 生成器 | 功能 | 特点 |
 |--------|------|------|
-| **Tripo 3D / Tripo P1** | 文生3D、图生3D、多视图生成3D | 默认 P1 模型，支持低面控制、PBR、网格分割 |
-| **Rodin** | 文生3D、图生3D、多视图生成3D | 支持 Gen-2.5 五种层级（超低/低/中/高/极高），FBX 输出 |
+| **Tripo 3D / Tripo P1** | 文生3D、图生3D、多视图生成3D | 默认 P1 模型，支持低面控制、PBR、网格分割；文生 3D 可选 `add_motion` 一步生成带动画角色 |
+| **Rodin** | 文生3D、图生3D、多视图生成3D | 支持 Gen-2.5 五种层级（超低/低/中/高/极高），FBX 输出；可用 `quality_override` 自定义面数上限（优先于 quality 预设）；文生 3D 可选 `add_motion` |
 | **混元3.1** | 文生3D、图生3D、多视图生成3D | 高精度生成，支持 PBR，输出 OBJ zip |
+| **Tripo 纹理重生成** | 对已有 3D 模型重新生成贴图 / PBR | CustomTool `generate_tripo_texture_model`，需已有模型 task ID 或 model URL |
 
 ### ✂️ 图片工具
 
 | 工具 | 功能 |
 |------|------|
 | **图片切割** | 对大图进行传统 CV 自动区域检测，预览并批量导出独立精灵（`AI/工具/图片切割`） |
+| **图片分层** | 将一张输入图 AI 拆分为多张独立 RGBA 图层 PNG（Qwen 或 Seedream Pro）；编辑器图片窗口与 CustomTool `generate_image_layers` |
 | **ESRGAN 图片放大** | Real-ESRGAN 超分（CustomTool `upscale_image`），支持 1x–8x、多种模型与可选人脸增强 |
-| **Game UI Kit** | 三步工作流（CustomTool `generate_game_ui_kit` + `slice_image`）：文生游戏 UI 截图 → 品红底 UI 抠图拼版 → CV 自动切割为独立 Sprite，便于提取 HUD/按钮等元素 |
+| **Game UI Kit** | 默认两步工作流（CustomTool `generate_game_ui_kit`）：Seedream Pro 文生游戏 UI 截图（2848×1600）→ 图层拆分为底图 + 最多 16 层透明 PNG；`frontier` 品红底抠图拼版为旧路径；图层合并时可用 `slice_image` 兜底切割 |
 
 ### 🌌 天空盒生成
 
@@ -35,6 +37,8 @@ TJGenerators for Unity 是一款强大的 AI 内容生成插件，集成团结 A
 | **火山 SeeDream Pro** | 文生图、图生图 | 更高质量图片生成，支持多参考图与自动抠图等参数；prompt 最长 1024 字符 |
 | **Frontier** | 文生图、图生图 | 风格化特效，支持多档分辨率与画幅 |
 | **Frontier Lite** | 文生图、图生图 | 轻量风格化图片生成 |
+| **图片分层（Qwen）** | 图生多图层 | 一张图片拆分为多张独立 RGBA 图层；需上传参考图，可设置图层数量（1–8） |
+| **图片分层（Seedream Pro）** | 图生多图层 | 自动拆为 1 张底图 + 最多 16 个透明图层；prompt 可选，`num_layers` 忽略，支持 `size` 档位（1K / 1.5K / 2K / auto） |
 
 ### 🎨 2D 精灵生成
 
@@ -65,7 +69,7 @@ TJGenerators for Unity 是一款强大的 AI 内容生成插件，集成团结 A
 
 | 生成器 | 功能 | 特点 |
 |--------|------|------|
-| **Seedance 2** | 文生/图生/多模态视频 | 火山 Seedance 2，支持 `first_frame` / `first_last_frame` / `multimodal`（参考视频 + 多参考图 + 音频参考）；可选 Mini / 标准 / 快速模型，4-15 秒，分辨率 480p / 720p |
+| **Seedance 2** | 文生/图生/多模态视频 | 火山 Seedance 2，支持 `first_frame` / `first_last_frame` / `multimodal`（参考视频 + 多参考图 + 音频参考）；可选参考图上传，未上传时文生视频、上传后自动切换参考图模式；可选 Mini / 标准 / 快速模型，4-15 秒，分辨率 480p / 720p |
 | **HappyHorse 1.1** | 文生/图生视频 | 阿里云 HappyHorse，支持首帧图生视频 |
 | **特效视频（生图+生视频）** | 文生/图生特效视频 | 绿幕输出，自动抠像生成 ChromaKey 材质，可一键在场景中创建特效播放器 |
 
@@ -86,8 +90,9 @@ TJGenerators for Unity 是一款强大的 AI 内容生成插件，集成团结 A
 
 - **配置驱动架构**：所有生成器通过 JSON 配置文件定义，添加新生成器无需编写 C# 代码
 - **公开 C# API**：支持在编辑器脚本中调用生成功能
-- **任务恢复机制**：编辑器意外关闭后自动恢复进行中的任务；CustomTool（图片、精灵、材质、音频、视频、特效视频、天空盒、地形、2D 序列帧、绑骨动画、图片放大、Game UI Kit 等）在 Domain Reload 后亦可自动恢复未完成生成；绑骨动画任务会持久化 `sessionId` 以便按会话恢复与通知
+- **任务恢复机制**：编辑器意外关闭后自动恢复进行中的任务；CustomTool（图片、图片分层、精灵、材质、音频、视频、特效视频、天空盒、地形、2D 序列帧、绑骨动画、图片放大、Game UI Kit 等）在 Domain Reload 后亦可自动恢复未完成生成；绑骨动画任务会持久化 `sessionId` 以便按会话恢复与通知
 - **Play 模式保护**：Unity 播放期间禁用生成、资产搜索、下载及场景放置操作，避免退出播放后生成内容被丢弃；提示文案可点击直接退出 Play Mode
+- **Placeholder 自动清理**：生成失败或取消时自动移除 Prefab 内残留 Placeholder 子对象；`AI/工具/清理占位 GameObject` 可批量扫描项目 Prefab 清理
 - **历史记录管理**：按资产隔离历史记录，支持快速复用与在 Project 中定位；写入 `sessionId` 便于按 Agent 会话分组，可通过 `list_session_assets` CustomTool 查询
 - **资产 Label 自动注册**：编辑器启动时自动写入 `TuanjieAI` 标签；精灵表序列帧资产额外写入 `TuanjieAI_Frontier`（代码常量 `SpriteSheetLabel`），便于 Project 搜索与 Inspector 路由
 - **使用文档入口**：窗口标题栏帮助、`AI/✦ 玩转 AI 生成` 菜单，以及 Inspector「✦ AI 生成」按钮均链至官方使用指南
@@ -129,6 +134,7 @@ TJGenerators for Unity 是一款强大的 AI 内容生成插件，集成团结 A
 | `AI/生成/生成视频` | 打开视频生成窗口（含特效视频绿幕工作流） |
 | `AI/生成/生成世界` | 打开 3D 世界生成窗口（World Labs Marble） |
 | `AI/工具/图片切割` | 打开 **图片切割** 窗口，自动检测并导出大图中的独立元素 |
+| `AI/工具/清理占位 GameObject` | 扫描项目内全部 Prefab，删除生成流程残留的 Placeholder 子对象 |
 | `AI/搜索资产库` | 打开 **资产库搜索** 编辑器窗口 |
 | `AI/✦ 玩转 AI 生成` | 在浏览器中打开 AI 生成工具使用文档 |
 | `AI/搜索生成的资产` | 聚焦 Project，并按 AI 生成标签过滤搜索 |
@@ -329,8 +335,10 @@ Editor/
     ├── Windows/                         # EditorWindow 主界面（各生成入口）
     │   ├── AIReferenceImageWindow.cs
     │   ├── TJGenerators3DModelWindow.cs
+    │   ├── TJGeneratorsAssetWindowBase.cs # 资产绑定 2D 生成窗口基类（精灵/材质/图片/序列帧）
     │   ├── TJGeneratorsImageSliceWindow.cs
     │   ├── TJGeneratorsImageWindow.cs
+    │   ├── TJGeneratorsMaterialWindow.cs
     │   ├── TJGeneratorsSpriteSheetSequenceWindow.cs # 2D 精灵表序列帧（整图切割）
     │   ├── TJGeneratorsMaterialTemplateGenerator.cs
     │   ├── TJGeneratorsMaterialTemplateSelectorWindow.cs

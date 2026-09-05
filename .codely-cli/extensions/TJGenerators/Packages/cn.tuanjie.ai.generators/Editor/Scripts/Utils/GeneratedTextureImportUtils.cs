@@ -1,4 +1,7 @@
 #if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -32,7 +35,7 @@ namespace TJGenerators.Utils
             }
             finally
             {
-                Object.DestroyImmediate(tex);
+                UnityEngine.Object.DestroyImmediate(tex);
             }
         }
 
@@ -80,6 +83,98 @@ namespace TJGenerators.Utils
             importer.SetPlatformTextureSettings(standalone);
 
             importer.SaveAndReimport();
+        }
+
+        /// <summary>
+        /// 收集多图分层产物：<paramref name="firstPath"/>（第 0 层）+ 同目录
+        /// <c>{basename}_1.ext</c> … <c>{basename}_{N-1}.ext</c>。
+        /// </summary>
+        public static List<string> CollectIndexedSiblingPaths(string firstPath, int expectedCount)
+        {
+            var paths = new List<string>();
+            if (string.IsNullOrEmpty(firstPath))
+                return paths;
+
+            firstPath = firstPath.Replace('\\', '/');
+            paths.Add(firstPath);
+
+            string dir = Path.GetDirectoryName(firstPath)?.Replace('\\', '/');
+            string baseName = Path.GetFileNameWithoutExtension(firstPath);
+            string ext = Path.GetExtension(firstPath);
+            if (string.IsNullOrEmpty(dir) || string.IsNullOrEmpty(baseName))
+                return paths;
+
+            int max = Math.Max(expectedCount, 1);
+            for (int i = 1; i < max; i++)
+            {
+                string candidate = $"{dir}/{baseName}_{i}{ext}";
+                if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(candidate) != null
+                    || File.Exists(PathUtils.ToAbsoluteAssetPath(candidate)))
+                {
+                    paths.Add(candidate);
+                    continue;
+                }
+
+                // UniqueAssetPath may have appended " 1" etc.; try loose search.
+                string[] guids = AssetDatabase.FindAssets(baseName + "_" + i, new[] { dir });
+                bool found = false;
+                foreach (string guid in guids)
+                {
+                    string p = AssetDatabase.GUIDToAssetPath(guid)?.Replace('\\', '/');
+                    if (string.IsNullOrEmpty(p)) continue;
+                    string fn = Path.GetFileNameWithoutExtension(p);
+                    if (MatchesIndexedSiblingFileName(fn, baseName, i))
+                    {
+                        paths.Add(p);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    break;
+            }
+
+            return paths;
+        }
+
+        /// <summary>
+        /// 将分层产物配置为 Default + RGBA32 + alpha（跳过已配置过的第 0 层亦可重复调用）。
+        /// </summary>
+        public static void ConfigureLayerTextures(
+            IList<string> layerPaths,
+            TextureImporterType textureType = TextureImporterType.Default,
+            bool alphaIsTransparency = true)
+        {
+            if (layerPaths == null || layerPaths.Count == 0)
+                return;
+
+            for (int i = 0; i < layerPaths.Count; i++)
+            {
+                string path = layerPaths[i];
+                if (string.IsNullOrEmpty(path))
+                    continue;
+                ConfigureImportedTexture(path, textureType, alphaIsTransparency);
+            }
+        }
+
+        /// <summary>
+        /// Matches <c>{baseName}_{index}</c> or UniqueAssetPath variants like <c>{baseName}_{index} 1</c>.
+        /// Avoids treating <c>_10</c> as a match for index <c>1</c>.
+        /// </summary>
+        internal static bool MatchesIndexedSiblingFileName(string fileNameWithoutExt, string baseName, int index)
+        {
+            if (string.IsNullOrEmpty(fileNameWithoutExt) || string.IsNullOrEmpty(baseName) || index < 0)
+                return false;
+
+            string prefix = baseName + "_" + index;
+            if (!fileNameWithoutExt.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (fileNameWithoutExt.Length == prefix.Length)
+                return true;
+
+            return fileNameWithoutExt[prefix.Length] == ' ';
         }
 
         private static bool IsPng(byte[] data)

@@ -28,7 +28,7 @@ namespace TJGenerators.Config
         public MaterialTemplateSelectorConfig promptTemplateSelector;
         public string imageBase64FieldName; // 有的模型期望配置为"image"，而不是"imageBase64"
         public bool imageBase64AsArray = false; // 是否将imageBase64作为数组发送
-        public bool imageBase64WithPrefix = false; // 是否添加 data:image/xxx;base64, 前缀（Meshy 需要）
+        public bool imageBase64WithPrefix = false; // 是否添加 data:image/xxx;base64, 前缀
         public string imageUrlsFieldName; // 图生图时参考图 URL 数组的字段名，如 "imageUrls"
         public string textInputFieldName; // 文本输入字段名，默认为"prompt"，混元Motion等使用"inputText"
         /// <summary>写死在请求体中的字段（不在面板展示），与 referenceImageGenerators.request.fixedFields 同结构。</summary>
