@@ -302,6 +302,7 @@ namespace MJ.AssetFrameWork.ABFrame
                     return go;
                 },
                 onGet: go => go.SetActive(true),
+                //返回对象池后重置参数
                 onReturn: go =>
                 {
                     go.SetActive(false);

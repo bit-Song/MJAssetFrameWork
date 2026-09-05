@@ -37,12 +37,12 @@ namespace MJ.AssetFrameWork.ABFrame.Pool
         private readonly Dictionary<Type, IPoolStats> _classPools = new Dictionary<Type, IPoolStats>();
 
         /// <summary>
-        /// 类对象池默认配置：容量200 懒创建 不自动回收
+        /// 预加载200个 不自动回收 
         /// </summary>
         /// <returns></returns>
         public PoolConfig NewClassPoolConfig()
         {
-            return new PoolConfig { MaxSize = -1, PreloadOnStart = false, AutoRecycleTime = 0f };
+            return new PoolConfig { InitialSize = 200, MaxSize = -1, PreloadOnStart = true, PreloadCount = 200, AutoRecycleTime = 0f };
         }
 
         /// <summary>
