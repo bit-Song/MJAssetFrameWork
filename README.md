@@ -5,7 +5,9 @@
 ## 1. 项目概述
 
 MJAssetFrameWork 是一套基于 Unity 的 **AssetBundle 热更新框架**，提供完整的资源打包、内嵌解压、版本检测、热更下载、资源加载、对象池管理等功能。框架使用 **UniTask** 实现异步流程，使用 **Newtonsoft.Json** 进行配置序列化。
-
+Package：
+com.unity.nuget.newtonsoft-json
+UniTask.*.*.*.unitypackage
 ### 技术栈
 
 | 组件 | 说明 |
