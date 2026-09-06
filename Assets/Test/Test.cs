@@ -36,9 +36,9 @@ namespace MJ.AssetFrameWork.ABFrame
         {
             if (Input.GetKeyDown(KeyCode.A))
             {
-                pool.Push(MJAssetsABFrame.Instantiate(AssetPath.Game.Prefab.Cube));
+                pool.Push(MJAssetsABFrame.Instantiate(AssetPath.Game.Prefab.Cube_prefab));
             }
-           
+
 
             if (Input.GetKeyDown(KeyCode.S))
             {
@@ -48,12 +48,12 @@ namespace MJ.AssetFrameWork.ABFrame
             {
                 MJAssetsABFrame.Release(pool.Pop(), true);
             }
-            
+
 
 
             if (Input.GetKeyDown(KeyCode.Q))
             {
-                pool2.Push(MJAssetsABFrame.Instantiate(AssetPath.Login.Prefab.Cube));
+                pool2.Push(MJAssetsABFrame.Instantiate(AssetPath.Login.Prefab.Cube_prefab));
             }
             if (Input.GetKeyDown(KeyCode.W))
             {
