@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abc77ddfc004ead4a8823c4f3a68c535, type: 3}
   m_Name: GeneratorConfig
   m_EditorClassIdentifier: 
-  bundleModuleEnumFilePath: MJFrame/MJAssetsFrame/GeneratorConfig
-  bundleModuleAssetsFilePath: MJFrame/MJAssetsFrame/GeneratorConfig
+  bundleModuleEnumFilePath: MJAssetsFrame/GeneratorConfig
+  bundleModuleAssetsFilePath: MJAssetsFrame/GeneratorConfig
   bundleModuleAssetsPath: BundleAssetsDemo
